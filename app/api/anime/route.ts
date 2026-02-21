@@ -20,6 +20,9 @@ type AniListMedia = {
   genres: string[];
   averageScore: number | null;
   popularity: number | null;
+  season: string | null;
+  seasonYear: number | null;
+  format: string | null;
 };
 
 type AniListResponse = {
@@ -70,6 +73,9 @@ const query = gql`
         genres
         averageScore
         popularity
+        season
+        seasonYear
+        format
       }
     }
   }
@@ -128,20 +134,24 @@ export async function GET(req: Request) {
       const poster = media.coverImage.extraLarge || media.coverImage.large;
       if (!poster) return [];
 
-      return [
-        {
-          id: media.id,
-          title: media.title.romaji || "Unknown Title",
-          poster,
-          banner: media.bannerImage || null,
-          episodes: media.episodes,
-          status: media.status,
-          genres: media.genres,
-          score: media.averageScore,
-          popularity: media.popularity,
-        },
-      ];
-    });
+        return [
+          {
+            id: media.id,
+            title: media.title.romaji || "Unknown Title",
+            description: "",
+            poster,
+            banner: media.bannerImage || null,
+            episodes: media.episodes ?? undefined,
+            status: media.status ?? undefined,
+            genres: media.genres,
+            score: media.averageScore ?? undefined,
+            popularity: media.popularity ?? undefined,
+            season: media.season ?? undefined,
+            seasonYear: media.seasonYear ?? undefined,
+            format: media.format ?? undefined,
+          },
+        ];
+      });
 
     return NextResponse.json(transformed, {
       status: 200,

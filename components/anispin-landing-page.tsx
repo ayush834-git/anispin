@@ -1,6 +1,7 @@
 "use client";
 
 import Image from "next/image";
+import Link from "next/link";
 import { animate, stagger } from "animejs";
 import { gsap } from "gsap";
 import { ScrollTrigger } from "gsap/ScrollTrigger";
@@ -303,14 +304,16 @@ function ChaosHeroSection({
                         zIndex: HERO_POSTER_LAYOUT[index]?.z ?? 1,
                       }}
                     >
-                      <Image
-                        src={anime.poster}
-                        alt={anime.title}
-                        width={320}
-                        height={460}
-                        loading="lazy"
-                        className="h-full w-full object-cover"
-                      />
+                      <Link href={`/anime/${anime.id}`} className="block h-full w-full">
+                        <Image
+                          src={anime.poster}
+                          alt={anime.title}
+                          width={320}
+                          height={460}
+                          loading="lazy"
+                          className="h-full w-full object-cover"
+                        />
+                      </Link>
                     </div>
                   ))}
             </div>
@@ -520,40 +523,45 @@ function SpinReactorSection() {
             </p>
 
             {!isSpinning && selectedAnime ? (
-              <article className="relative w-full max-w-2xl overflow-hidden rounded-2xl border border-white/10 bg-[#11162A]/92">
-                {selectedAnime.banner ? (
-                  <Image
-                    src={selectedAnime.banner}
-                    alt="banner"
-                    fill
-                    className="object-cover opacity-35"
-                  />
-                ) : (
-                  <div className="absolute inset-0 bg-gradient-to-br from-[#FF5E00]/35 via-[#0F1220] to-[#00F0FF]/28" />
-                )}
-                <div className="relative flex items-start gap-4 p-4">
-                  <Image
-                    src={selectedAnime.poster}
-                    alt={selectedAnime.title}
-                    width={300}
-                    height={420}
-                    loading="lazy"
-                    className="h-32 w-24 rounded-lg object-cover"
-                  />
-                  <div className="min-w-0">
-                    <p className="anispin-display text-3xl text-white">{selectedAnime.title}</p>
-                    <p className="mt-1 text-xs font-semibold uppercase tracking-wide text-white/80">
-                      {formatStatus(selectedAnime.status)} | {selectedAnime.episodes ?? "?"} EPS
-                    </p>
-                    <p className="mt-2 text-sm font-semibold text-white/88">
-                      Score: {selectedAnime.score ?? "N/A"} | Popularity: {selectedAnime.popularity ?? "N/A"}
-                    </p>
-                    <p className="mt-2 text-xs font-medium text-white/78">
-                      {selectedAnime.genres.join(", ")}
-                    </p>
+              <Link href={`/anime/${selectedAnime.id}`} className="block w-full max-w-2xl">
+                <article className="relative overflow-hidden rounded-2xl border border-white/10 bg-[#11162A]/92">
+                  {selectedAnime.banner ? (
+                    <Image
+                      src={selectedAnime.banner}
+                      alt="banner"
+                      fill
+                      className="object-cover opacity-35"
+                    />
+                  ) : (
+                    <div className="absolute inset-0 bg-gradient-to-br from-[#FF5E00]/35 via-[#0F1220] to-[#00F0FF]/28" />
+                  )}
+                  <div className="relative flex items-start gap-4 p-4">
+                    <Image
+                      src={selectedAnime.poster}
+                      alt={selectedAnime.title}
+                      width={300}
+                      height={420}
+                      loading="lazy"
+                      className="h-32 w-24 rounded-lg object-cover"
+                    />
+                    <div className="min-w-0">
+                      <p className="anispin-display text-3xl text-white">{selectedAnime.title}</p>
+                      <p className="mt-1 text-xs font-semibold uppercase tracking-wide text-white/80">
+                        {formatStatus(selectedAnime.status)} | {selectedAnime.episodes ?? "?"} EPS
+                      </p>
+                      <p className="mt-2 text-sm font-semibold text-white/88">
+                        Score: {selectedAnime.score ?? "N/A"} | Popularity: {selectedAnime.popularity ?? "N/A"}
+                      </p>
+                      <p className="mt-2 text-xs font-medium text-white/78">
+                        {selectedAnime.genres.join(", ")}
+                      </p>
+                      <p className="mt-3 text-xs font-black uppercase tracking-wide text-[#00F0FF]">
+                        View Details
+                      </p>
+                    </div>
                   </div>
-                </div>
-              </article>
+                </article>
+              </Link>
             ) : null}
           </div>
         </div>
@@ -642,30 +650,32 @@ function AnimeCollectionSection({
                       onMouseEnter={() => setHoveredIndex(index)}
                       onMouseLeave={() => setHoveredIndex(null)}
                     >
-                      <div className="anispin-poster-media relative overflow-visible rounded-lg">
-                        <Image
-                          src={anime.poster}
-                          alt={anime.title}
-                          width={300}
-                          height={420}
-                          loading="lazy"
-                          className="h-[200px] w-full rounded-lg object-cover md:h-[210px]"
-                        />
+                      <Link href={`/anime/${anime.id}`} className="block">
+                        <div className="anispin-poster-media relative overflow-visible rounded-lg">
+                          <Image
+                            src={anime.poster}
+                            alt={anime.title}
+                            width={300}
+                            height={420}
+                            loading="lazy"
+                            className="h-[200px] w-full rounded-lg object-cover md:h-[210px]"
+                          />
 
-                        <span className="absolute left-2 top-2 rounded-md bg-[#0B0F1A]/78 px-2 py-0.5 text-[11px] font-bold text-[#00F0FF]">
-                          {anime.score ?? "N/A"}
-                        </span>
-                        <span className="absolute right-2 top-2 rounded-md bg-[#0B0F1A]/78 px-2 py-0.5 text-[11px] font-bold text-[#FF5E00]">
-                          {formatStatus(anime.status)}
-                        </span>
-                        <span className="absolute bottom-2 left-2 text-2xl font-black text-white drop-shadow-[0_2px_8px_rgba(0,0,0,0.9)]">
-                          {String(index + 1).padStart(2, "0")}
-                        </span>
-                      </div>
+                          <span className="absolute left-2 top-2 rounded-md bg-[#0B0F1A]/78 px-2 py-0.5 text-[11px] font-bold text-[#00F0FF]">
+                            {anime.score ?? "N/A"}
+                          </span>
+                          <span className="absolute right-2 top-2 rounded-md bg-[#0B0F1A]/78 px-2 py-0.5 text-[11px] font-bold text-[#FF5E00]">
+                            {formatStatus(anime.status)}
+                          </span>
+                          <span className="absolute bottom-2 left-2 text-2xl font-black text-white drop-shadow-[0_2px_8px_rgba(0,0,0,0.9)]">
+                            {String(index + 1).padStart(2, "0")}
+                          </span>
+                        </div>
 
-                      <h3 className="mt-2 truncate px-1 text-sm font-black uppercase text-white">
-                        {anime.title}
-                      </h3>
+                        <h3 className="mt-2 truncate px-1 text-sm font-black uppercase text-white">
+                          {anime.title}
+                        </h3>
+                      </Link>
 
                       {isHovered ? (
                         <div
@@ -681,9 +691,12 @@ function AnimeCollectionSection({
                           <p className="mt-2 text-xs leading-relaxed text-white/72">
                             {anime.genres.join(", ")}
                           </p>
-                          <Button className="anispin-secondary-button mt-3 h-8 rounded-full px-3 text-[11px] font-black uppercase text-white">
-                            Watch Now
-                          </Button>
+                          <Link
+                            href={`/anime/${anime.id}`}
+                            className="anispin-secondary-button mt-3 inline-flex h-8 items-center rounded-full px-3 text-[11px] font-black uppercase text-white"
+                          >
+                            View Details
+                          </Link>
                         </div>
                       ) : null}
                     </article>
@@ -697,23 +710,25 @@ function AnimeCollectionSection({
                 <h3 className="anispin-display mb-3 text-4xl text-white">Top 10</h3>
                 <div className="space-y-2.5">
                   {topTen.map((anime, index) => (
-                    <div key={`${id}-top-${anime.id}`} className="flex items-center gap-2.5">
-                      <span className="w-10 text-3xl font-black text-[#FF5E00]">
-                        {String(index + 1).padStart(2, "0")}
-                      </span>
-                      <Image
-                        src={anime.poster}
-                        alt={`${anime.title} thumbnail`}
-                        width={90}
-                        height={120}
-                        loading="lazy"
-                        className="h-12 w-9 rounded-md object-cover"
-                      />
-                      <div className="min-w-0">
-                        <p className="truncate text-xs font-bold uppercase text-white">{anime.title}</p>
-                        <p className="text-[11px] font-semibold text-[#00F0FF]">{anime.score ?? "N/A"}</p>
+                    <Link key={`${id}-top-${anime.id}`} href={`/anime/${anime.id}`} className="block">
+                      <div className="flex items-center gap-2.5">
+                        <span className="w-10 text-3xl font-black text-[#FF5E00]">
+                          {String(index + 1).padStart(2, "0")}
+                        </span>
+                        <Image
+                          src={anime.poster}
+                          alt={`${anime.title} thumbnail`}
+                          width={90}
+                          height={120}
+                          loading="lazy"
+                          className="h-12 w-9 rounded-md object-cover"
+                        />
+                        <div className="min-w-0">
+                          <p className="truncate text-xs font-bold uppercase text-white">{anime.title}</p>
+                          <p className="text-[11px] font-semibold text-[#00F0FF]">{anime.score ?? "N/A"}</p>
+                        </div>
                       </div>
-                    </div>
+                    </Link>
                   ))}
                 </div>
               </aside>

@@ -1,13 +1,17 @@
 export type Anime = {
   id: number;
   title: string;
+  description: string;
   poster: string;
   banner?: string | null;
-  episodes?: number | null;
-  status?: string | null;
+  episodes?: number;
+  status?: string;
   genres: string[];
-  score?: number | null;
-  popularity?: number | null;
+  score?: number;
+  popularity?: number;
+  season?: string;
+  seasonYear?: number;
+  format?: string;
 };
 
 export type Filters = {
@@ -16,4 +20,3 @@ export type Filters = {
   seasonal?: boolean;
   classic?: boolean;
 };
-
