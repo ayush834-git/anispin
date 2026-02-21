@@ -289,13 +289,10 @@ html.lenis body {
 }
 
 .anispin-poster-media::after {
-  content: "";
+  content: none;
   position: absolute;
   inset: 0;
   pointer-events: none;
-  background: var(--poster-overlay);
-  opacity: 0.5;
-  mix-blend-mode: screen;
 }
 
 .anispin-floating-info {
