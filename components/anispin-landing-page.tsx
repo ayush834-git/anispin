@@ -5,7 +5,7 @@ import Link from "next/link";
 import { animate, stagger } from "animejs";
 import { gsap } from "gsap";
 import { ScrollTrigger } from "gsap/ScrollTrigger";
-import { Clapperboard, Flame, Tv } from "lucide-react";
+import { Flame } from "lucide-react";
 import {
   type CSSProperties,
   useCallback,
@@ -199,11 +199,11 @@ function ChaosHeader() {
             aria-label="AniSpin logo"
           >
             <Image
-              src="/anispin-logo-full.svg"
+              src="/anispin-logo-exact.png"
               alt="AniSpin logo"
-              width={228}
-              height={64}
-              className="h-12 w-auto"
+              width={1536}
+              height={1536}
+              className="h-12 w-12 rounded-md object-contain"
               priority
             />
           </div>
@@ -1149,22 +1149,6 @@ function AnimeCollectionSection({
   );
 }
 
-function SectionHeader() {
-  return (
-    <section className="py-10">
-      <div className="mx-auto w-full max-w-[1600px] px-3 md:px-5">
-        <div className="flex flex-wrap items-center gap-3 rounded-2xl border border-white/10 bg-[#11162A]/90 p-4">
-          <Tv className="size-5 text-[#00F0FF]" />
-          <Clapperboard className="size-5 text-[#FF5E00]" />
-          <p className="text-sm font-black uppercase tracking-[0.16em] text-white/88">
-            Live AniList Data Layer Active
-          </p>
-        </div>
-      </div>
-    </section>
-  );
-}
-
 export function AniSpinLandingPage() {
   const trendingFilters = useMemo<Filters>(() => ({}), []);
   const airingFilters = useMemo<Filters>(() => ({ status: "AIRING" }), []);
@@ -1177,7 +1161,6 @@ export function AniSpinLandingPage() {
   return (
     <main className="anispin-page text-white/92">
       <ChaosHeader />
-      <SectionHeader />
       <ChaosHeroSection
         animeList={trendingQuery.animeList}
         isLoading={trendingQuery.isLoading}
