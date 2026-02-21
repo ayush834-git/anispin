@@ -5,7 +5,6 @@ export type Anime = {
   poster: string;
   banner?: string | null;
   episodes?: number;
-  duration?: number;
   status?: string;
   genres: string[];
   score?: number;
@@ -22,7 +21,7 @@ export type Anime = {
         poster: string;
         episodes?: number;
         status?: string;
-        seasonYear?: number;
+        startYear?: number;
         format?: string;
       };
     }>;

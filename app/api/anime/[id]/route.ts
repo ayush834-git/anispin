@@ -19,7 +19,6 @@ type AniListMedia = {
   };
   bannerImage: string | null;
   episodes: number | null;
-  duration: number | null;
   status: string | null;
   genres: string[];
   averageScore: number | null;
@@ -44,7 +43,9 @@ type AniListMedia = {
         episodes: number | null;
         format: string | null;
         status: string | null;
-        seasonYear: number | null;
+        startDate: {
+          year: number | null;
+        } | null;
       } | null;
     } | null> | null;
   } | null;
@@ -74,7 +75,6 @@ const query = gql`
       }
       bannerImage
       episodes
-      duration
       status
       genres
       averageScore
@@ -99,7 +99,9 @@ const query = gql`
             episodes
             format
             status
-            seasonYear
+            startDate {
+              year
+            }
           }
         }
       }
@@ -152,7 +154,7 @@ export async function GET(
             poster: relationPoster,
             episodes: node.episodes ?? undefined,
             status: node.status ?? undefined,
-            seasonYear: node.seasonYear ?? undefined,
+            startYear: node.startDate?.year ?? undefined,
             format: node.format ?? undefined,
           },
         };
@@ -170,7 +172,6 @@ export async function GET(
       poster,
       banner: media.bannerImage || null,
       episodes: media.episodes ?? undefined,
-      duration: media.duration ?? undefined,
       status: media.status ?? undefined,
       genres: media.genres,
       score: media.averageScore ?? undefined,

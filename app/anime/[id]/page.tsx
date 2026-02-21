@@ -3,6 +3,8 @@ import Link from "next/link";
 
 import { type Anime } from "@/types/anime";
 
+import { WatchSearchButton } from "./watch-search-button";
+
 async function getAnime(id: string): Promise<Anime> {
   const baseUrl = process.env.NEXT_PUBLIC_BASE_URL ?? "http://localhost:3000";
 
@@ -38,14 +40,14 @@ function getEpisodeDisplay(anime: Pick<Anime, "status" | "episodes">) {
 function getSeasonStatusLabel(status?: string) {
   if (status === "FINISHED") return "Season Finished";
   if (status === "RELEASING") return "Currently Airing";
-  if (status === "NOT_YET_RELEASED") return "Upcoming";
+  if (status === "NOT_YET_RELEASED") return "Upcoming Season";
   return "Season Status Unknown";
 }
 
 function getRelatedStatusLabel(status?: string) {
   if (status === "RELEASING") return "Currently Airing";
   if (status === "FINISHED") return "Season Finished";
-  if (status === "NOT_YET_RELEASED") return "Upcoming";
+  if (status === "NOT_YET_RELEASED") return "Upcoming Season";
   return "Status Unknown";
 }
 
@@ -80,17 +82,18 @@ export default async function AnimeDetailPage({
   const description = anime.description?.trim() || "No description available.";
   const score10 = typeof anime.score === "number" ? (anime.score / 10).toFixed(1) : null;
   const popularityTier = getPopularityTier(anime.popularity);
-  const seasonLabel = anime.season
-    ? `${anime.season}${anime.seasonYear ? ` ${anime.seasonYear}` : ""}`
-    : anime.seasonYear
-      ? String(anime.seasonYear)
-      : "Unknown";
   const episodeDisplay = getEpisodeDisplay(anime);
   const seasonStatusLabel = getSeasonStatusLabel(anime.status);
-  const relatedSeasons =
+  const isMainstreamHit = popularityTier === "Mainstream Hit";
+  const relatedTV =
     anime.relations?.edges?.filter(
       (edge) => edge.node.format === "TV" && edge.node.id !== anime.id,
-    ) ?? [];
+    )
+      .sort((a, b) => {
+        const ay = a.node.startYear ?? Number.POSITIVE_INFINITY;
+        const by = b.node.startYear ?? Number.POSITIVE_INFINITY;
+        return ay - by;
+      }) ?? [];
 
   return (
     <main className="min-h-screen bg-[#0B0F1A] text-white">
@@ -144,72 +147,22 @@ export default async function AnimeDetailPage({
               </div>
             </div>
 
-            <div className="space-y-2 text-sm font-semibold text-white/90">
-              <p>{anime.format ?? "Unknown Format"}</p>
-              <p>{seasonLabel}</p>
-            </div>
-
             <div className="space-y-1 border-t border-white/10 pt-4">
               <p className="text-xs font-black uppercase tracking-[0.14em] text-white/70">This Season</p>
               <p className="text-base font-semibold text-white/92">{episodeDisplay}</p>
             </div>
 
-            {relatedSeasons.length ? (
-              <div className="space-y-3 border-t border-white/10 pt-4">
-                <p className="text-xs font-black uppercase tracking-[0.14em] text-white/70">
-                  Other Seasons & Related
-                </p>
-                <div className="flex flex-col gap-3 md:flex-row md:gap-4 md:overflow-x-auto md:pb-2">
-                  {relatedSeasons.map(({ node }) => (
-                    <Link
-                      key={node.id}
-                      href={`/anime/${node.id}`}
-                      className="group rounded-xl border border-white/12 bg-[#11162A]/70 p-2 transition hover:border-[#00F0FF]/55 md:w-[300px] md:flex-shrink-0"
-                    >
-                      <div className="flex gap-3">
-                        <Image
-                          src={node.poster}
-                          alt={node.title}
-                          width={88}
-                          height={124}
-                          className="h-[124px] w-[88px] rounded-lg object-cover"
-                          loading="lazy"
-                        />
-                        <div className="min-w-0 space-y-1.5 text-xs font-semibold text-white/80">
-                          <p className="line-clamp-2 text-sm font-black uppercase tracking-wide text-white/94">
-                            {node.title}
-                          </p>
-                          <p>{node.seasonYear ?? "Year Unknown"}</p>
-                          <p>{getRelatedStatusLabel(node.status)}</p>
-                          <p>{getEpisodeDisplay(node)}</p>
-                        </div>
-                      </div>
-                    </Link>
-                  ))}
-                </div>
-              </div>
-            ) : null}
-
-            <div className="space-y-2">
-              <span className="inline-flex rounded-full border border-[#FF5E00]/45 bg-[#FF5E00]/12 px-3 py-1.5 text-xs font-black uppercase tracking-wide text-[#FFD3B8]">
-                {popularityTier}
-              </span>
-              {anime.popularity ? (
-                <p className="text-xs font-semibold text-white/58">
-                  Added by {anime.popularity.toLocaleString()} users
-                </p>
-              ) : null}
-            </div>
-
-            <div className="flex flex-wrap gap-2">
-              {anime.genres.map((genre) => (
-                <span
-                  key={genre}
-                  className="rounded-full border border-white/15 bg-[#11162A] px-3 py-1 text-xs font-bold uppercase tracking-wide text-white/90"
-                >
-                  {genre}
+            <div className="space-y-2 border-t border-white/10 pt-4">
+              {isMainstreamHit ? (
+                <span className="inline-flex rounded-full border border-[#FF5E00]/45 bg-[#FF5E00]/12 px-3 py-1.5 text-xs font-black uppercase tracking-wide text-[#FFD3B8]">
+                  Mainstream Hit
                 </span>
-              ))}
+              ) : null}
+              <p className="text-xs font-black uppercase tracking-[0.14em] text-white/70">Where to Watch</p>
+              <WatchSearchButton title={anime.title} />
+              <p className="text-xs font-semibold text-white/58">
+                Streaming availability varies by region.
+              </p>
             </div>
           </div>
         </div>
@@ -220,6 +173,42 @@ export default async function AnimeDetailPage({
             <p className="text-[15px] leading-8 text-white/88">{description}</p>
           </article>
         </div>
+
+        {relatedTV.length ? (
+          <div className="mx-auto mt-8 w-full max-w-6xl border-t border-white/10 pt-8">
+            <p className="mb-4 text-xs font-black uppercase tracking-[0.14em] text-white/70">
+              More in This Series
+            </p>
+            <div className="flex flex-col gap-3 md:flex-row md:gap-4 md:overflow-x-auto md:pb-2">
+              {relatedTV.map(({ node }) => (
+                <Link
+                  key={node.id}
+                  href={`/anime/${node.id}`}
+                  className="group rounded-xl border border-white/12 bg-[#11162A]/70 p-2 transition hover:border-[#00F0FF]/55 md:w-[300px] md:flex-shrink-0"
+                >
+                  <div className="flex gap-3">
+                    <Image
+                      src={node.poster}
+                      alt={node.title}
+                      width={88}
+                      height={124}
+                      className="h-[124px] w-[88px] rounded-lg object-cover"
+                      loading="lazy"
+                    />
+                    <div className="min-w-0 space-y-1.5 text-xs font-semibold text-white/80">
+                      <p className="line-clamp-2 text-sm font-black uppercase tracking-wide text-white/94">
+                        {node.title}
+                      </p>
+                      <p>{node.startYear ?? "Year Unknown"}</p>
+                      <p>{getRelatedStatusLabel(node.status)}</p>
+                      <p>{getEpisodeDisplay(node)}</p>
+                    </div>
+                  </div>
+                </Link>
+              ))}
+            </div>
+          </div>
+        ) : null}
       </section>
     </main>
   );
