@@ -120,14 +120,15 @@ export default async function AnimeDetailPage({
       </section>
 
       <section className="px-4 py-10">
-        <div className="mx-auto grid w-full max-w-6xl gap-8 md:grid-cols-[280px_1fr]">
-          <div className="relative mx-auto w-[240px] md:mx-0 md:w-[280px]">
+        <div className="mx-auto w-full max-w-[1200px] px-4 sm:px-6">
+          <div className="flex flex-col gap-8 md:flex-row">
+            <div className="relative w-full max-w-[320px] md:max-w-[350px]">
             <Image
               src={anime.poster}
               alt={anime.title}
               width={300}
               height={420}
-              className="h-auto w-full rounded-xl border border-white/10 object-cover shadow-[0_20px_40px_rgba(0,0,0,0.55)]"
+              className="w-full max-w-[320px] rounded-xl border border-white/10 object-cover shadow-[0_20px_40px_rgba(0,0,0,0.55)] md:max-w-[350px]"
               priority
             />
           </div>
@@ -172,8 +173,9 @@ export default async function AnimeDetailPage({
             <FranchiseEntriesStrip entries={franchiseEntryCards} />
           </div>
         </div>
+        </div>
 
-        <div className="mx-auto mt-10 w-full max-w-6xl border-t border-white/10 pt-8">
+        <div className="mx-auto mt-10 w-full max-w-[1200px] border-t border-white/10 px-4 pt-8 sm:px-6">
           <article className="rounded-2xl bg-[#11162A]/56 p-6 md:p-7">
             <h3 className="mb-4 text-sm font-black uppercase tracking-[0.14em] text-white/85">Description</h3>
             <p className="text-[15px] leading-8 text-white/88">{description}</p>
