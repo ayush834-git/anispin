@@ -1,40 +1,17 @@
 "use client";
-/* eslint-disable @next/next/no-img-element */
 
+import Image from "next/image";
 import { animate, stagger } from "animejs";
 import { gsap } from "gsap";
 import { ScrollTrigger } from "gsap/ScrollTrigger";
-import { Flame, Star } from "lucide-react";
+import { Clapperboard, Flame, Star, Tv } from "lucide-react";
 import { type WheelEvent, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 
-import { useSpinEngine } from "@/hooks/useSpinEngine";
-import { type AnimeFilters } from "@/lib/anilist";
+import { GenreDropdown } from "@/components/GenreDropdown";
 import { Button } from "@/components/ui/button";
-
-type PosterItem = {
-  src: string;
-  alt: string;
-};
-
-type TrendingItem = {
-  title: string;
-  rating: string;
-  episodes: string;
-  type: "TV" | "MOVIE";
-  description: string;
-  image: string;
-};
-
-const HERO_POSTERS: PosterItem[] = [
-  { src: "https://placehold.co/320x460/ff5e00/ffffff?text=ANIME+01", alt: "Anime poster 01" },
-  { src: "https://placehold.co/320x460/00f0ff/0b0f1a?text=ANIME+02", alt: "Anime poster 02" },
-  { src: "https://placehold.co/320x460/ff007a/ffffff?text=ANIME+03", alt: "Anime poster 03" },
-  { src: "https://placehold.co/320x460/7b2eff/ffffff?text=ANIME+04", alt: "Anime poster 04" },
-  { src: "https://placehold.co/320x460/b4ff00/0b0f1a?text=ANIME+05", alt: "Anime poster 05" },
-  { src: "https://placehold.co/320x460/0f1220/ffffff?text=ANIME+06", alt: "Anime poster 06" },
-  { src: "https://placehold.co/320x460/ff5e00/ffffff?text=ANIME+07", alt: "Anime poster 07" },
-  { src: "https://placehold.co/320x460/00f0ff/0b0f1a?text=ANIME+08", alt: "Anime poster 08" },
-];
+import { useAnimeQuery } from "@/hooks/useAnimeQuery";
+import { useSpinEngine } from "@/hooks/useSpinEngine";
+import { type Anime, type Filters } from "@/types/anime";
 
 const HERO_POSTER_LAYOUT = [
   { top: "2%", left: "6%", rotate: -6, z: 16 },
@@ -46,105 +23,6 @@ const HERO_POSTER_LAYOUT = [
   { top: "62%", left: "14%", rotate: -5, z: 15 },
   { top: "64%", left: "44%", rotate: 3, z: 12 },
 ] as const;
-
-const TRENDING_ITEMS: TrendingItem[] = [
-  {
-    title: "Blaze Circuit",
-    rating: "8.7",
-    episodes: "24 EPS",
-    type: "TV",
-    description: "Street duels, reactor blades, no mercy brackets.",
-    image: "https://placehold.co/320x450/ff5e00/ffffff?text=BLAZE+CIRCUIT",
-  },
-  {
-    title: "Phantom Relay",
-    rating: "8.4",
-    episodes: "12 EPS",
-    type: "TV",
-    description: "A sabotage run through neon ruins and dead satellites.",
-    image: "https://placehold.co/320x450/00f0ff/0b0f1a?text=PHANTOM+RELAY",
-  },
-  {
-    title: "Aqua Fracture",
-    rating: "8.9",
-    episodes: "26 EPS",
-    type: "TV",
-    description: "Depth-city hunters chasing stolen core drives.",
-    image: "https://placehold.co/320x450/ff007a/ffffff?text=AQUA+FRACTURE",
-  },
-  {
-    title: "Vortex Hearts",
-    rating: "7.9",
-    episodes: "MOVIE",
-    type: "MOVIE",
-    description: "One night, one spin, one irreversible duel.",
-    image: "https://placehold.co/320x450/7b2eff/ffffff?text=VORTEX+HEARTS",
-  },
-  {
-    title: "Steel Shrine",
-    rating: "8.2",
-    episodes: "13 EPS",
-    type: "TV",
-    description: "Ancient engines awaken under red alarms.",
-    image: "https://placehold.co/320x450/b4ff00/0b0f1a?text=STEEL+SHRINE",
-  },
-  {
-    title: "Night Reboot",
-    rating: "8.3",
-    episodes: "11 EPS",
-    type: "TV",
-    description: "Hackers, samurai frames, and one broken future.",
-    image: "https://placehold.co/320x450/ff5e00/ffffff?text=NIGHT+REBOOT",
-  },
-  {
-    title: "Crimson Orbit",
-    rating: "8.8",
-    episodes: "22 EPS",
-    type: "TV",
-    description: "A rogue fleet enters a forbidden gravity loop.",
-    image: "https://placehold.co/320x450/00f0ff/0b0f1a?text=CRIMSON+ORBIT",
-  },
-  {
-    title: "Ghost Queue",
-    rating: "8.1",
-    episodes: "16 EPS",
-    type: "TV",
-    description: "Every episode is chosen by an illegal wheel.",
-    image: "https://placehold.co/320x450/ff007a/ffffff?text=GHOST+QUEUE",
-  },
-  {
-    title: "Overclock Eden",
-    rating: "8.0",
-    episodes: "MOVIE",
-    type: "MOVIE",
-    description: "A lost idol AI takes over the broadcast net.",
-    image: "https://placehold.co/320x450/7b2eff/ffffff?text=OVERCLOCK+EDEN",
-  },
-  {
-    title: "Ignition Zero",
-    rating: "8.5",
-    episodes: "14 EPS",
-    type: "TV",
-    description: "Merc squads race to control the final reactor key.",
-    image: "https://placehold.co/320x450/b4ff00/0b0f1a?text=IGNITION+ZERO",
-  },
-  {
-    title: "Pulse Catacomb",
-    rating: "7.8",
-    episodes: "10 EPS",
-    type: "TV",
-    description: "Labyrinth fights lit by unstable neon crystals.",
-    image: "https://placehold.co/320x450/ff5e00/ffffff?text=PULSE+CATACOMB",
-  },
-  {
-    title: "Shatter Mode",
-    rating: "8.6",
-    episodes: "18 EPS",
-    type: "TV",
-    description: "Tournament brackets collapse into full war.",
-    image: "https://placehold.co/320x450/00f0ff/0b0f1a?text=SHATTER+MODE",
-  },
-];
 
 const FEATURE_STRIP = [
   {
@@ -165,23 +43,32 @@ const FEATURE_STRIP = [
   },
 ] as const;
 
-const SPIN_FILTER_PRESETS = {
-  trending: {},
-  completed: { status: "FINISHED", completedOnly: true },
-  genreAction: { genre: "Action" },
-  airing: { status: "RELEASING" },
-  seasonal: { season: "WINTER", seasonYear: new Date().getFullYear() },
-  classic: { yearLessThan: 2010 },
-} satisfies Record<string, AnimeFilters>;
+function formatStatus(status?: string | null) {
+  if (!status) return "UNKNOWN";
+  if (status === "RELEASING") return "AIRING";
+  return status;
+}
 
-const SPIN_FILTER_LABELS: Record<keyof typeof SPIN_FILTER_PRESETS, string> = {
-  trending: "Trending",
-  completed: "Completed",
-  genreAction: "Genre: Action",
-  airing: "Airing",
-  seasonal: "Seasonal",
-  classic: "Classic < 2010",
-};
+function StatusBubble({ text }: { text: string }) {
+  return (
+    <div className="rounded-full border border-[#00F0FF]/45 bg-[#11162A]/90 px-4 py-2 text-xs font-bold text-white/90">
+      {text}
+    </div>
+  );
+}
+
+function AnimeGridSkeleton({ count = 10 }: { count?: number }) {
+  return (
+    <div className="grid grid-cols-2 gap-3 md:grid-cols-4 lg:gap-3.5 xl:grid-cols-5">
+      {Array.from({ length: count }).map((_, index) => (
+        <div
+          key={`skeleton-${index}`}
+          className="h-[250px] animate-pulse rounded-xl border border-white/10 bg-[#11162A]"
+        />
+      ))}
+    </div>
+  );
+}
 
 function ChaosHeader() {
   const logoRef = useRef<HTMLDivElement | null>(null);
@@ -208,6 +95,14 @@ function ChaosHeader() {
     });
   };
 
+  const links = [
+    { id: "home", label: "Home" },
+    { id: "spin-reactor", label: "Spin" },
+    { id: "trending", label: "Trending" },
+    { id: "top-airing", label: "Top Airing" },
+    { id: "completed", label: "Completed" },
+  ] as const;
+
   return (
     <header className={`anispin-header sticky top-0 z-50 h-[72px] ${isScrolled ? "is-scrolled" : ""}`}>
       <div className="mx-auto flex h-full w-full max-w-[1600px] items-center justify-between gap-3 px-3 md:px-5">
@@ -227,15 +122,15 @@ function ChaosHeader() {
         </button>
 
         <nav className="hidden items-center gap-1 text-[15px] font-semibold md:flex">
-          {["Home", "Spin", "Trending", "Top Airing", "Completed"].map((item, index) => (
-            <button
-              key={item}
-              type="button"
+          {links.map((item, index) => (
+            <a
+              key={item.id}
+              href={`#${item.id}`}
               aria-current={index === 0 ? "page" : undefined}
               className={`anispin-nav-link rounded-md px-2.5 py-1.5 transition-colors hover:bg-white/10 ${index === 0 ? "anispin-nav-link-active" : ""}`}
             >
-              {item}
-            </button>
+              {item.label}
+            </a>
           ))}
         </nav>
 
@@ -247,45 +142,57 @@ function ChaosHeader() {
   );
 }
 
-function ChaosHeroSection() {
+function ChaosHeroSection({
+  animeList,
+  isLoading,
+  error,
+}: {
+  animeList: Anime[];
+  isLoading: boolean;
+  error: string | null;
+}) {
   const sectionRef = useRef<HTMLElement | null>(null);
   const collageRef = useRef<HTMLDivElement | null>(null);
   const posterRefs = useRef<Array<HTMLDivElement | null>>([]);
   const ctaWrapRef = useRef<HTMLDivElement | null>(null);
   const ctaPulseRef = useRef<HTMLSpanElement | null>(null);
 
+  const heroAnime = useMemo(() => animeList.slice(0, HERO_POSTER_LAYOUT.length), [animeList]);
+
   useEffect(() => {
     const running: Array<{ pause: () => void }> = [];
 
     if (ctaPulseRef.current) {
-      const pulseAnim = animate(ctaPulseRef.current, {
-        scale: [1, 1.35],
-        opacity: [0.45, 0],
-        duration: 1350,
-        ease: "out(4)",
-        loop: true,
-      });
-      running.push(pulseAnim);
+      running.push(
+        animate(ctaPulseRef.current, {
+          scale: [1, 1.35],
+          opacity: [0.45, 0],
+          duration: 1350,
+          ease: "out(4)",
+          loop: true,
+        }),
+      );
     }
 
     posterRefs.current.forEach((poster, index) => {
       if (!poster) return;
       const baseRotate = HERO_POSTER_LAYOUT[index]?.rotate ?? 0;
-      const posterAnim = animate(poster, {
-        translateY: [-8, 11],
-        rotate: [baseRotate - 1.3, baseRotate + 1.3],
-        duration: 2200 + index * 190,
-        loop: true,
-        alternate: true,
-        ease: "inOutSine",
-      });
-      running.push(posterAnim);
+      running.push(
+        animate(poster, {
+          translateY: [-8, 11],
+          rotate: [baseRotate - 1.3, baseRotate + 1.3],
+          duration: 2200 + index * 190,
+          loop: true,
+          alternate: true,
+          ease: "inOutSine",
+        }),
+      );
     });
 
     return () => {
       running.forEach((animation) => animation.pause());
     };
-  }, []);
+  }, [heroAnime.length]);
 
   useLayoutEffect(() => {
     gsap.registerPlugin(ScrollTrigger);
@@ -325,7 +232,7 @@ function ChaosHeroSection() {
   };
 
   return (
-    <section ref={sectionRef} className="relative overflow-hidden py-12 md:py-20">
+    <section id="home" ref={sectionRef} className="relative overflow-hidden py-12 md:py-20">
       <div className="anispin-hero-ghosts" aria-hidden>
         <span className="anispin-hero-ghost anispin-hero-ghost-a" />
         <span className="anispin-hero-ghost anispin-hero-ghost-b" />
@@ -354,41 +261,58 @@ function ChaosHeroSection() {
                   className="pointer-events-none absolute inset-0 rounded-full bg-[#00F0FF]/45 blur-xl"
                   aria-hidden
                 />
-                <Button className="anispin-main-cta relative z-10 h-14 rounded-full px-10 text-base font-black uppercase tracking-wide text-white md:h-16 md:text-lg">
-                  Spin The Wheel
-                </Button>
+                <a href="#spin-reactor">
+                  <Button className="anispin-main-cta relative z-10 h-14 rounded-full px-10 text-base font-black uppercase tracking-wide text-white md:h-16 md:text-lg">
+                    Spin The Wheel
+                  </Button>
+                </a>
               </div>
             </div>
-            <p className="text-sm font-bold uppercase tracking-wide text-[#FF5E00]/95">
-              Your watchlist needs discipline.
-            </p>
+            {error ? <StatusBubble text="Unable to load anime. Try again later." /> : null}
+            {!isLoading && !error && heroAnime.length === 0 ? (
+              <StatusBubble text="No matches found. Try different filters." />
+            ) : null}
           </div>
 
           <div className="col-span-12 lg:col-span-5">
             <div ref={collageRef} className="relative h-[520px] w-full md:h-[620px]">
-              {HERO_POSTERS.map((poster, index) => (
-                <div
-                  key={poster.alt}
-                  ref={(element) => {
-                    posterRefs.current[index] = element;
-                  }}
-                  className="anispin-collage-poster absolute h-[180px] w-[128px] overflow-hidden rounded-xl md:h-[210px] md:w-[148px]"
-                  style={{
-                    top: HERO_POSTER_LAYOUT[index]?.top,
-                    left: HERO_POSTER_LAYOUT[index]?.left,
-                    rotate: `${HERO_POSTER_LAYOUT[index]?.rotate ?? 0}deg`,
-                    zIndex: HERO_POSTER_LAYOUT[index]?.z ?? 1,
-                  }}
-                >
-                  <img
-                    src={poster.src}
-                    alt={poster.alt}
-                    loading="lazy"
-                    decoding="async"
-                    className="h-full w-full object-cover"
-                  />
-                </div>
-              ))}
+              {isLoading
+                ? HERO_POSTER_LAYOUT.map((layout, index) => (
+                    <div
+                      key={`hero-skeleton-${index}`}
+                      className="anispin-collage-poster absolute h-[180px] w-[128px] animate-pulse rounded-xl bg-[#11162A] md:h-[210px] md:w-[148px]"
+                      style={{
+                        top: layout.top,
+                        left: layout.left,
+                        rotate: `${layout.rotate}deg`,
+                        zIndex: layout.z,
+                      }}
+                    />
+                  ))
+                : heroAnime.map((anime, index) => (
+                    <div
+                      key={anime.id}
+                      ref={(element) => {
+                        posterRefs.current[index] = element;
+                      }}
+                      className="anispin-collage-poster absolute h-[180px] w-[128px] overflow-hidden rounded-xl md:h-[210px] md:w-[148px]"
+                      style={{
+                        top: HERO_POSTER_LAYOUT[index]?.top,
+                        left: HERO_POSTER_LAYOUT[index]?.left,
+                        rotate: `${HERO_POSTER_LAYOUT[index]?.rotate ?? 0}deg`,
+                        zIndex: HERO_POSTER_LAYOUT[index]?.z ?? 1,
+                      }}
+                    >
+                      <Image
+                        src={anime.poster}
+                        alt={anime.title}
+                        width={320}
+                        height={460}
+                        loading="lazy"
+                        className="h-full w-full object-cover"
+                      />
+                    </div>
+                  ))}
             </div>
           </div>
         </div>
@@ -398,29 +322,21 @@ function ChaosHeroSection() {
 }
 
 function SpinReactorSection() {
+  const [filters, setFilters] = useState<Filters>({});
   const {
     filteredList,
     selectedAnime,
-    isSpinning,
     isLoading,
-    hasLoaded,
     error,
-    loadAnime,
+    isSpinning,
     spin,
-  } = useSpinEngine();
+  } = useSpinEngine(filters);
 
   const ringRef = useRef<HTMLDivElement | null>(null);
   const pulseRef = useRef<HTMLSpanElement | null>(null);
   const sweepRef = useRef<HTMLSpanElement | null>(null);
   const spinButtonRef = useRef<HTMLDivElement | null>(null);
   const wheelRotationRef = useRef(0);
-  const [activePreset, setActivePreset] = useState<keyof typeof SPIN_FILTER_PRESETS>("trending");
-
-  const activeFilters = useMemo(() => SPIN_FILTER_PRESETS[activePreset], [activePreset]);
-
-  useEffect(() => {
-    void loadAnime(activeFilters);
-  }, [activeFilters, loadAnime]);
 
   useEffect(() => {
     const running: Array<{ pause: () => void }> = [];
@@ -472,7 +388,7 @@ function SpinReactorSection() {
   };
 
   const onSpinClick = () => {
-    const result = spin(activeFilters);
+    const result = spin();
     if (!result || !ringRef.current) return;
 
     const sliceCount = 10;
@@ -494,7 +410,7 @@ function SpinReactorSection() {
     });
   };
 
-  const isEmpty = hasLoaded && !isLoading && !error && filteredList.length === 0;
+  const isEmpty = !isLoading && !error && filteredList.length === 0;
 
   return (
     <section id="spin-reactor" className="py-12 md:py-20">
@@ -509,36 +425,61 @@ function SpinReactorSection() {
             </p>
 
             <div className="flex flex-wrap items-center justify-center gap-2">
-              {Object.keys(SPIN_FILTER_PRESETS).map((presetKey) => {
-                const key = presetKey as keyof typeof SPIN_FILTER_PRESETS;
-                return (
-                  <button
-                    key={key}
-                    type="button"
-                    className={`rounded-full px-3 py-1.5 text-[11px] font-black uppercase tracking-wide transition-colors ${
-                      activePreset === key
-                        ? "anispin-secondary-button text-white"
-                        : "bg-white/10 text-white/85 hover:bg-white/15"
-                    }`}
-                    onClick={() => setActivePreset(key)}
-                  >
-                    {SPIN_FILTER_LABELS[key]}
-                  </button>
-                );
-              })}
+              <GenreDropdown selectedGenre={filters.genre} setFilters={setFilters} />
+
+              <button
+                type="button"
+                className={`rounded-full px-3 py-1.5 text-[11px] font-black uppercase tracking-wide ${
+                  filters.status === "AIRING" ? "anispin-secondary-button text-white" : "bg-white/10 text-white/85 hover:bg-white/15"
+                }`}
+                onClick={() =>
+                  setFilters((prev) => ({
+                    ...prev,
+                    status: prev.status === "AIRING" ? undefined : "AIRING",
+                  }))
+                }
+              >
+                Airing
+              </button>
+
+              <button
+                type="button"
+                className={`rounded-full px-3 py-1.5 text-[11px] font-black uppercase tracking-wide ${
+                  filters.status === "FINISHED" ? "anispin-secondary-button text-white" : "bg-white/10 text-white/85 hover:bg-white/15"
+                }`}
+                onClick={() =>
+                  setFilters((prev) => ({
+                    ...prev,
+                    status: prev.status === "FINISHED" ? undefined : "FINISHED",
+                  }))
+                }
+              >
+                Completed
+              </button>
+
+              <button
+                type="button"
+                className={`rounded-full px-3 py-1.5 text-[11px] font-black uppercase tracking-wide ${
+                  filters.seasonal ? "anispin-secondary-button text-white" : "bg-white/10 text-white/85 hover:bg-white/15"
+                }`}
+                onClick={() => setFilters((prev) => ({ ...prev, seasonal: !prev.seasonal }))}
+              >
+                Seasonal
+              </button>
+
+              <button
+                type="button"
+                className={`rounded-full px-3 py-1.5 text-[11px] font-black uppercase tracking-wide ${
+                  filters.classic ? "anispin-secondary-button text-white" : "bg-white/10 text-white/85 hover:bg-white/15"
+                }`}
+                onClick={() => setFilters((prev) => ({ ...prev, classic: !prev.classic }))}
+              >
+                Classic
+              </button>
             </div>
 
-            {error ? (
-              <div className="rounded-full border border-[#FF5E00]/50 bg-[#11162A]/90 px-4 py-2 text-xs font-bold text-white/90">
-                Unable to load anime. Try again later.
-              </div>
-            ) : null}
-
-            {isEmpty ? (
-              <div className="rounded-full border border-[#00F0FF]/45 bg-[#11162A]/90 px-4 py-2 text-xs font-bold text-white/90">
-                No matches found. Try different filters.
-              </div>
-            ) : null}
+            {error ? <StatusBubble text="Unable to load anime. Try again later." /> : null}
+            {isEmpty ? <StatusBubble text="No matches found. Try different filters." /> : null}
 
             <div className="relative mt-2 h-[min(76vw,520px)] w-[min(76vw,520px)]">
               <span
@@ -579,23 +520,30 @@ function SpinReactorSection() {
             </p>
 
             {!isSpinning && selectedAnime ? (
-              <article className="w-full max-w-2xl rounded-2xl border border-white/10 bg-[#11162A]/92 p-4">
-                <div className="flex items-start gap-4">
-                  {selectedAnime.poster ? (
-                    <img
-                      src={selectedAnime.poster}
-                      alt={selectedAnime.title}
-                      loading="lazy"
-                      decoding="async"
-                      className="h-32 w-24 rounded-lg object-cover"
-                    />
-                  ) : (
-                    <div className="h-32 w-24 rounded-lg bg-white/10" />
-                  )}
+              <article className="relative w-full max-w-2xl overflow-hidden rounded-2xl border border-white/10 bg-[#11162A]/92">
+                {selectedAnime.banner ? (
+                  <Image
+                    src={selectedAnime.banner}
+                    alt="banner"
+                    fill
+                    className="object-cover opacity-35"
+                  />
+                ) : (
+                  <div className="absolute inset-0 bg-gradient-to-br from-[#FF5E00]/35 via-[#0F1220] to-[#00F0FF]/28" />
+                )}
+                <div className="relative flex items-start gap-4 p-4">
+                  <Image
+                    src={selectedAnime.poster}
+                    alt={selectedAnime.title}
+                    width={300}
+                    height={420}
+                    loading="lazy"
+                    className="h-32 w-24 rounded-lg object-cover"
+                  />
                   <div className="min-w-0">
                     <p className="anispin-display text-3xl text-white">{selectedAnime.title}</p>
                     <p className="mt-1 text-xs font-semibold uppercase tracking-wide text-white/80">
-                      {selectedAnime.status ?? "Unknown Status"} | {selectedAnime.episodes ?? "?"} EPS
+                      {formatStatus(selectedAnime.status)} | {selectedAnime.episodes ?? "?"} EPS
                     </p>
                     <p className="mt-2 text-sm font-semibold text-white/88">
                       Score: {selectedAnime.score ?? "N/A"} | Popularity: {selectedAnime.popularity ?? "N/A"}
@@ -614,33 +562,44 @@ function SpinReactorSection() {
   );
 }
 
-function TrendingChaosSection() {
+function AnimeCollectionSection({
+  id,
+  title,
+  animeList,
+  isLoading,
+  error,
+  showTopTen,
+}: {
+  id: string;
+  title: string;
+  animeList: Anime[];
+  isLoading: boolean;
+  error: string | null;
+  showTopTen?: boolean;
+}) {
   const [hoveredIndex, setHoveredIndex] = useState<number | null>(null);
   const gridRef = useRef<HTMLDivElement | null>(null);
   const infoRefs = useRef<Array<HTMLDivElement | null>>([]);
 
   useEffect(() => {
-    if (!gridRef.current) return;
-
+    if (!gridRef.current || animeList.length === 0) return;
     const cards = gridRef.current.querySelectorAll(".anispin-grid-card");
     const gridAnim = animate(cards, {
       opacity: [0, 1],
       translateY: [24, 0],
-      delay: stagger(55),
-      duration: 620,
+      delay: stagger(45),
+      duration: 520,
       ease: "out(3)",
     });
-
     return () => {
       gridAnim.pause();
     };
-  }, []);
+  }, [animeList]);
 
   useEffect(() => {
     if (hoveredIndex === null) return;
     const infoPanel = infoRefs.current[hoveredIndex];
     if (!infoPanel) return;
-
     animate(infoPanel, {
       opacity: [0, 1],
       translateX: [-18, 0],
@@ -649,113 +608,118 @@ function TrendingChaosSection() {
     });
   }, [hoveredIndex]);
 
-  const topTen = useMemo(() => TRENDING_ITEMS.slice(0, 10), []);
+  const topTen = useMemo(() => animeList.slice(0, 10), [animeList]);
+  const renderedList = useMemo(() => animeList.slice(0, 15), [animeList]);
 
   return (
-    <section id="trending" className="py-12 md:py-16">
+    <section id={id} className="py-12 md:py-16">
       <div className="mx-auto w-full max-w-[1600px] px-3 md:px-5">
         <div className="mb-4 flex items-center gap-3">
           <Flame className="size-7 text-[#FF5E00]" />
-          <h2 className="anispin-display text-5xl text-white md:text-6xl">
-            Hot Right Now
-          </h2>
+          <h2 className="anispin-display text-5xl text-white md:text-6xl">{title}</h2>
         </div>
 
-        <div className="flex items-start gap-4">
-          <div className="min-w-0 flex-1 lg:-ml-4">
-            <div
-              ref={gridRef}
-              className="grid grid-cols-2 gap-3 md:grid-cols-4 lg:gap-3.5 xl:grid-cols-5"
-            >
-              {TRENDING_ITEMS.map((item, index) => {
-                const isHovered = hoveredIndex === index;
-                return (
-                  <article
-                    key={item.title}
-                    className="anispin-grid-card group relative rounded-xl p-1.5 will-change-transform hover:z-30 hover:border-[#00F0FF]/65"
-                    style={{ rotate: `${index % 2 === 0 ? -2 : 2}deg` }}
-                    onMouseEnter={() => setHoveredIndex(index)}
-                    onMouseLeave={() => setHoveredIndex(null)}
-                  >
-                    <div className="anispin-poster-media relative overflow-visible rounded-lg">
-                      <img
-                        src={item.image}
-                        alt={item.title}
-                        loading="lazy"
-                        decoding="async"
-                        className="h-[200px] w-full rounded-lg object-cover md:h-[210px]"
-                      />
+        {error ? (
+          <StatusBubble text="Unable to load anime. Try again later." />
+        ) : isLoading ? (
+          <AnimeGridSkeleton />
+        ) : renderedList.length === 0 ? (
+          <StatusBubble text="No matches found. Try different filters." />
+        ) : (
+          <div className="flex items-start gap-4">
+            <div className="min-w-0 flex-1 lg:-ml-4">
+              <div
+                ref={gridRef}
+                className="grid grid-cols-2 gap-3 md:grid-cols-4 lg:gap-3.5 xl:grid-cols-5"
+              >
+                {renderedList.map((anime, index) => {
+                  const isHovered = hoveredIndex === index;
+                  return (
+                    <article
+                      key={`${id}-${anime.id}`}
+                      className="anispin-grid-card group relative rounded-xl p-1.5 will-change-transform hover:z-30 hover:border-[#00F0FF]/65"
+                      style={{ rotate: `${index % 2 === 0 ? -2 : 2}deg` }}
+                      onMouseEnter={() => setHoveredIndex(index)}
+                      onMouseLeave={() => setHoveredIndex(null)}
+                    >
+                      <div className="anispin-poster-media relative overflow-visible rounded-lg">
+                        <Image
+                          src={anime.poster}
+                          alt={anime.title}
+                          width={300}
+                          height={420}
+                          loading="lazy"
+                          className="h-[200px] w-full rounded-lg object-cover md:h-[210px]"
+                        />
 
-                      <span className="absolute left-2 top-2 rounded-md bg-[#0B0F1A]/78 px-2 py-0.5 text-[11px] font-bold text-[#00F0FF]">
-                        {item.rating}
-                      </span>
-                      <span className="absolute right-2 top-2 rounded-md bg-[#0B0F1A]/78 px-2 py-0.5 text-[11px] font-bold text-[#FF5E00]">
-                        {item.type}
-                      </span>
-                      <span className="absolute bottom-2 left-2 text-2xl font-black text-white drop-shadow-[0_2px_8px_rgba(0,0,0,0.9)]">
+                        <span className="absolute left-2 top-2 rounded-md bg-[#0B0F1A]/78 px-2 py-0.5 text-[11px] font-bold text-[#00F0FF]">
+                          {anime.score ?? "N/A"}
+                        </span>
+                        <span className="absolute right-2 top-2 rounded-md bg-[#0B0F1A]/78 px-2 py-0.5 text-[11px] font-bold text-[#FF5E00]">
+                          {formatStatus(anime.status)}
+                        </span>
+                        <span className="absolute bottom-2 left-2 text-2xl font-black text-white drop-shadow-[0_2px_8px_rgba(0,0,0,0.9)]">
+                          {String(index + 1).padStart(2, "0")}
+                        </span>
+                      </div>
+
+                      <h3 className="mt-2 truncate px-1 text-sm font-black uppercase text-white">
+                        {anime.title}
+                      </h3>
+
+                      {isHovered ? (
+                        <div
+                          ref={(element) => {
+                            infoRefs.current[index] = element;
+                          }}
+                          className="anispin-floating-info absolute left-[72%] top-3 z-40 w-60 rounded-xl p-3 shadow-[0_20px_40px_rgba(0,0,0,0.75)]"
+                        >
+                          <p className="text-sm font-black uppercase text-white">{anime.title}</p>
+                          <p className="mt-1 text-xs font-semibold text-white/82">
+                            Rating {anime.score ?? "N/A"} | {anime.episodes ?? "?"} EPS
+                          </p>
+                          <p className="mt-2 text-xs leading-relaxed text-white/72">
+                            {anime.genres.join(", ")}
+                          </p>
+                          <Button className="anispin-secondary-button mt-3 h-8 rounded-full px-3 text-[11px] font-black uppercase text-white">
+                            Watch Now
+                          </Button>
+                        </div>
+                      ) : null}
+                    </article>
+                  );
+                })}
+              </div>
+            </div>
+
+            {showTopTen ? (
+              <aside className="anispin-ranking-panel hidden w-[300px] shrink-0 rounded-xl p-3 lg:block">
+                <h3 className="anispin-display mb-3 text-4xl text-white">Top 10</h3>
+                <div className="space-y-2.5">
+                  {topTen.map((anime, index) => (
+                    <div key={`${id}-top-${anime.id}`} className="flex items-center gap-2.5">
+                      <span className="w-10 text-3xl font-black text-[#FF5E00]">
                         {String(index + 1).padStart(2, "0")}
                       </span>
-                    </div>
-
-                    <h3 className="mt-2 truncate px-1 text-sm font-black uppercase text-white">
-                      {item.title}
-                    </h3>
-
-                    {isHovered ? (
-                      <div
-                        ref={(element) => {
-                          infoRefs.current[index] = element;
-                        }}
-                        className="anispin-floating-info absolute left-[72%] top-3 z-40 w-60 rounded-xl p-3 shadow-[0_20px_40px_rgba(0,0,0,0.75)]"
-                      >
-                        <p className="text-sm font-black uppercase text-white">
-                          {item.title}
-                        </p>
-                        <p className="mt-1 text-xs font-semibold text-white/82">
-                          Rating {item.rating} | {item.episodes}
-                        </p>
-                        <p className="mt-2 text-xs leading-relaxed text-white/72">
-                          {item.description}
-                        </p>
-                        <Button className="anispin-secondary-button mt-3 h-8 rounded-full px-3 text-[11px] font-black uppercase text-white">
-                          Watch Now
-                        </Button>
+                      <Image
+                        src={anime.poster}
+                        alt={`${anime.title} thumbnail`}
+                        width={90}
+                        height={120}
+                        loading="lazy"
+                        className="h-12 w-9 rounded-md object-cover"
+                      />
+                      <div className="min-w-0">
+                        <p className="truncate text-xs font-bold uppercase text-white">{anime.title}</p>
+                        <p className="text-[11px] font-semibold text-[#00F0FF]">{anime.score ?? "N/A"}</p>
                       </div>
-                    ) : null}
-                  </article>
-                );
-              })}
-            </div>
-          </div>
-
-          <aside className="anispin-ranking-panel hidden w-[300px] shrink-0 rounded-xl p-3 lg:block">
-            <h3 className="anispin-display mb-3 text-4xl text-white">Top 10</h3>
-            <div className="space-y-2.5">
-              {topTen.map((item, index) => (
-                <div key={item.title} className="flex items-center gap-2.5">
-                  <span className="w-10 text-3xl font-black text-[#FF5E00]">
-                    {String(index + 1).padStart(2, "0")}
-                  </span>
-                  <img
-                    src={item.image}
-                    alt={`${item.title} thumbnail`}
-                    loading="lazy"
-                    decoding="async"
-                    className="h-12 w-9 rounded-md object-cover"
-                  />
-                  <div className="min-w-0">
-                    <p className="truncate text-xs font-bold uppercase text-white">
-                      {item.title}
-                    </p>
-                    <p className="text-[11px] font-semibold text-[#00F0FF]">
-                      {item.rating}
-                    </p>
-                  </div>
+                    </div>
+                  ))}
                 </div>
-              ))}
-            </div>
-          </aside>
-        </div>
+              </aside>
+            ) : null}
+          </div>
+        )}
       </div>
     </section>
   );
@@ -811,13 +775,63 @@ function FeatureStripSection() {
   );
 }
 
+function SectionHeader() {
+  return (
+    <section className="py-10">
+      <div className="mx-auto w-full max-w-[1600px] px-3 md:px-5">
+        <div className="flex flex-wrap items-center gap-3 rounded-2xl border border-white/10 bg-[#11162A]/90 p-4">
+          <Tv className="size-5 text-[#00F0FF]" />
+          <Clapperboard className="size-5 text-[#FF5E00]" />
+          <p className="text-sm font-black uppercase tracking-[0.16em] text-white/88">
+            Live AniList Data Layer Active
+          </p>
+        </div>
+      </div>
+    </section>
+  );
+}
+
 export function AniSpinLandingPage() {
+  const trendingFilters = useMemo<Filters>(() => ({}), []);
+  const airingFilters = useMemo<Filters>(() => ({ status: "AIRING" }), []);
+  const completedFilters = useMemo<Filters>(() => ({ status: "FINISHED" }), []);
+
+  const trendingQuery = useAnimeQuery(trendingFilters);
+  const airingQuery = useAnimeQuery(airingFilters);
+  const completedQuery = useAnimeQuery(completedFilters);
+
   return (
     <main className="anispin-page text-white/92">
       <ChaosHeader />
-      <ChaosHeroSection />
+      <SectionHeader />
+      <ChaosHeroSection
+        animeList={trendingQuery.animeList}
+        isLoading={trendingQuery.isLoading}
+        error={trendingQuery.error}
+      />
       <SpinReactorSection />
-      <TrendingChaosSection />
+      <AnimeCollectionSection
+        id="trending"
+        title="Trending"
+        animeList={trendingQuery.animeList}
+        isLoading={trendingQuery.isLoading}
+        error={trendingQuery.error}
+        showTopTen
+      />
+      <AnimeCollectionSection
+        id="top-airing"
+        title="Top Airing"
+        animeList={airingQuery.animeList}
+        isLoading={airingQuery.isLoading}
+        error={airingQuery.error}
+      />
+      <AnimeCollectionSection
+        id="completed"
+        title="Completed"
+        animeList={completedQuery.animeList}
+        isLoading={completedQuery.isLoading}
+        error={completedQuery.error}
+      />
       <FeatureStripSection />
     </main>
   );

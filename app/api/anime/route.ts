@@ -1,30 +1,20 @@
 import { NextResponse } from "next/server";
 import { gql, request } from "graphql-request";
-import { z } from "zod";
+
+import { type Anime } from "@/types/anime";
 
 const endpoint = "https://graphql.anilist.co";
-
-const mediaStatusSchema = z.enum([
-  "FINISHED",
-  "RELEASING",
-  "NOT_YET_RELEASED",
-  "CANCELLED",
-  "HIATUS",
-]);
-
-const mediaSeasonSchema = z.enum(["WINTER", "SPRING", "SUMMER", "FALL"]);
 
 type AniListMedia = {
   id: number;
   title: {
     romaji: string | null;
-    english: string | null;
   };
   coverImage: {
-    large: string | null;
     extraLarge: string | null;
-    color: string | null;
+    large: string | null;
   };
+  bannerImage: string | null;
   episodes: number | null;
   status: string | null;
   genres: string[];
@@ -37,6 +27,14 @@ type AniListResponse = {
     media: AniListMedia[];
   };
 };
+
+function getCurrentSeason() {
+  const month = new Date().getMonth() + 1;
+  if (month <= 2 || month === 12) return "WINTER";
+  if (month <= 5) return "SPRING";
+  if (month <= 8) return "SUMMER";
+  return "FALL";
+}
 
 const query = gql`
   query (
@@ -61,13 +59,12 @@ const query = gql`
         id
         title {
           romaji
-          english
         }
         coverImage {
-          large
           extraLarge
-          color
+          large
         }
+        bannerImage
         episodes
         status
         genres
@@ -82,25 +79,34 @@ export async function GET(req: Request) {
   const { searchParams } = new URL(req.url);
 
   const genre = searchParams.get("genre") ?? undefined;
+  const seasonal = searchParams.get("seasonal") === "true";
+  const classic = searchParams.get("classic") === "true";
 
-  const rawStatus = searchParams.get("status") ?? undefined;
-  const status = rawStatus && mediaStatusSchema.safeParse(rawStatus).success
-    ? rawStatus
+  const rawStatus = searchParams.get("status");
+  const status =
+    rawStatus === "AIRING"
+      ? "RELEASING"
+      : rawStatus === "FINISHED"
+        ? "FINISHED"
+        : undefined;
+
+  let season = searchParams.get("season") ?? undefined;
+  let seasonYear = searchParams.get("seasonYear")
+    ? Number(searchParams.get("seasonYear"))
     : undefined;
 
-  const rawSeason = searchParams.get("season") ?? undefined;
-  const season = rawSeason && mediaSeasonSchema.safeParse(rawSeason).success
-    ? rawSeason
-    : undefined;
-
-  const seasonYearParam = searchParams.get("seasonYear");
-  const seasonYear = seasonYearParam ? Number(seasonYearParam) : undefined;
+  if (seasonal) {
+    season = getCurrentSeason();
+    seasonYear = new Date().getFullYear();
+  }
 
   const yearLessThanParam = searchParams.get("yearLessThan");
-  const yearLessThanRaw = yearLessThanParam ? Number(yearLessThanParam) : undefined;
-  const yearLessThan = typeof yearLessThanRaw === "number" && Number.isFinite(yearLessThanRaw)
-    ? yearLessThanRaw * 10000 + 101
-    : undefined;
+  const yearLessThanValue = yearLessThanParam ? Number(yearLessThanParam) : undefined;
+  const yearThreshold = classic ? 2010 : yearLessThanValue;
+  const yearLessThan =
+    typeof yearThreshold === "number" && Number.isFinite(yearThreshold)
+      ? yearThreshold * 10000 + 101
+      : undefined;
 
   const variables = {
     page: 1,
@@ -108,30 +114,39 @@ export async function GET(req: Request) {
     genre,
     status,
     season,
-    seasonYear: Number.isFinite(seasonYear) ? seasonYear : undefined,
+    seasonYear:
+      typeof seasonYear === "number" && Number.isFinite(seasonYear)
+        ? seasonYear
+        : undefined,
     yearLessThan,
   };
 
   try {
     const data = await request<AniListResponse>(endpoint, query, variables);
-    const media = data.Page?.media ?? [];
 
-    const transformed = media.map((anime) => ({
-      id: anime.id,
-      title: anime.title.english || anime.title.romaji || "Unknown Title",
-      poster: anime.coverImage.extraLarge || anime.coverImage.large || null,
-      dominantColor: anime.coverImage.color,
-      episodes: anime.episodes,
-      status: anime.status,
-      genres: anime.genres,
-      score: anime.averageScore,
-      popularity: anime.popularity,
-    }));
+    const transformed: Anime[] = (data.Page?.media ?? []).flatMap((media) => {
+      const poster = media.coverImage.extraLarge || media.coverImage.large;
+      if (!poster) return [];
+
+      return [
+        {
+          id: media.id,
+          title: media.title.romaji || "Unknown Title",
+          poster,
+          banner: media.bannerImage || null,
+          episodes: media.episodes,
+          status: media.status,
+          genres: media.genres,
+          score: media.averageScore,
+          popularity: media.popularity,
+        },
+      ];
+    });
 
     return NextResponse.json(transformed, {
       status: 200,
       headers: {
-        "Cache-Control": "public, max-age=0, s-maxage=3600",
+        "Cache-Control": "s-maxage=3600",
       },
     });
   } catch {

@@ -1,57 +1,33 @@
-import { useCallback, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
-import { fetchAnime, type AnimeFilters, type AnimeItem } from "@/lib/anilist";
+import { useAnimeQuery } from "@/hooks/useAnimeQuery";
+import { type Anime, type Filters } from "@/types/anime";
 
 type SpinResult = {
-  picked: AnimeItem;
+  picked: Anime;
   pickedIndex: number;
 } | null;
 
-function applyFilterList(list: AnimeItem[], filters: Record<string, unknown>) {
-  return list.filter((anime) => {
-    return (
-      (!filters.genre || anime.genres.includes(String(filters.genre))) &&
-      (!filters.completedOnly || anime.status === "FINISHED")
-    );
-  });
-}
-
-export function useSpinEngine() {
-  const [animeList, setAnimeList] = useState<AnimeItem[]>([]);
-  const [filteredList, setFilteredList] = useState<AnimeItem[]>([]);
-  const [selectedAnime, setSelectedAnime] = useState<AnimeItem | null>(null);
+export function useSpinEngine(filters: Filters) {
+  const { animeList, isLoading, error } = useAnimeQuery(filters, 400);
+  const [filteredList, setFilteredList] = useState<Anime[]>([]);
+  const [selectedAnime, setSelectedAnime] = useState<Anime | null>(null);
   const [isSpinning, setIsSpinning] = useState(false);
-  const [isLoading, setIsLoading] = useState(false);
-  const [hasLoaded, setHasLoaded] = useState(false);
-  const [error, setError] = useState<string | null>(null);
   const spinTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-  const loadAnime = useCallback(async (filters: AnimeFilters) => {
-    setIsLoading(true);
-    setError(null);
-
-    try {
-      const list = await fetchAnime(filters);
-      const filtered = applyFilterList(list, filters);
-      setAnimeList(list);
-      setFilteredList(filtered);
-    } catch {
-      setAnimeList([]);
-      setFilteredList([]);
-      setError("Unable to load anime. Try again later.");
-    } finally {
-      setIsLoading(false);
-      setHasLoaded(true);
-    }
-  }, []);
-
-  const applyFilters = useCallback((filters: Record<string, unknown>) => {
-    const filtered = applyFilterList(animeList, filters);
-    setFilteredList(filtered);
-    return filtered;
+  useEffect(() => {
+    setFilteredList(animeList);
   }, [animeList]);
 
-  const weightedSelect = useCallback((list: AnimeItem[]) => {
+  useEffect(() => {
+    return () => {
+      if (spinTimerRef.current) {
+        clearTimeout(spinTimerRef.current);
+      }
+    };
+  }, []);
+
+  const weightedSelect = useCallback((list: Anime[]) => {
     if (list.length === 0) return null;
 
     const weights = list.map((item) => {
@@ -69,20 +45,17 @@ export function useSpinEngine() {
     return list[list.length - 1];
   }, []);
 
-  const spin = useCallback((filters: Record<string, unknown>): SpinResult => {
+  const spin = useCallback((): SpinResult => {
     setIsSpinning(true);
 
-    const filtered = applyFilterList(animeList, filters);
-    setFilteredList(filtered);
-
-    if (filtered.length === 0) {
+    if (filteredList.length === 0) {
       setSelectedAnime(null);
       if (spinTimerRef.current) clearTimeout(spinTimerRef.current);
       spinTimerRef.current = setTimeout(() => setIsSpinning(false), 1800);
       return null;
     }
 
-    const picked = weightedSelect(filtered);
+    const picked = weightedSelect(filteredList);
     if (!picked) {
       setSelectedAnime(null);
       if (spinTimerRef.current) clearTimeout(spinTimerRef.current);
@@ -90,24 +63,26 @@ export function useSpinEngine() {
       return null;
     }
 
-    const pickedIndex = filtered.findIndex((anime) => anime.id === picked.id);
+    const pickedIndex = filteredList.findIndex((anime) => anime.id === picked.id);
     setSelectedAnime(picked);
+
     if (spinTimerRef.current) clearTimeout(spinTimerRef.current);
     spinTimerRef.current = setTimeout(() => setIsSpinning(false), 1800);
 
-    return { picked, pickedIndex: Math.max(0, pickedIndex) };
-  }, [animeList, weightedSelect]);
+    return {
+      picked,
+      pickedIndex: Math.max(0, pickedIndex),
+    };
+  }, [filteredList, weightedSelect]);
 
-  return {
+  return useMemo(() => ({
     animeList,
     filteredList,
     selectedAnime,
-    isSpinning,
     isLoading,
-    hasLoaded,
     error,
-    loadAnime,
-    applyFilters,
+    isSpinning,
     spin,
-  };
+  }), [animeList, filteredList, selectedAnime, isLoading, error, isSpinning, spin]);
 }
+
