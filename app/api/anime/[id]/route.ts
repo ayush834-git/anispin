@@ -18,6 +18,11 @@ type AniListMedia = {
     large: string | null;
   };
   bannerImage: string | null;
+  trailer: {
+    id: string | null;
+    site: string | null;
+    thumbnail: string | null;
+  } | null;
   episodes: number | null;
   status: string | null;
   genres: string[];
@@ -79,6 +84,11 @@ const query = gql`
         large
       }
       bannerImage
+      trailer {
+        id
+        site
+        thumbnail
+      }
       episodes
       status
       genres
@@ -178,6 +188,14 @@ export async function GET(
       description: cleanDescription(media.description || ""),
       poster,
       banner: media.bannerImage || null,
+      trailer:
+        media.trailer?.id && media.trailer?.site
+          ? {
+              id: media.trailer.id,
+              site: media.trailer.site,
+              thumbnail: media.trailer.thumbnail ?? null,
+            }
+          : null,
       episodes: media.episodes ?? undefined,
       status: media.status ?? undefined,
       genres: media.genres,
