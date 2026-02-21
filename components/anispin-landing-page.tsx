@@ -7,6 +7,8 @@ import { ScrollTrigger } from "gsap/ScrollTrigger";
 import { Flame, Star } from "lucide-react";
 import { type WheelEvent, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 
+import { useSpinEngine } from "@/hooks/useSpinEngine";
+import { type AnimeFilters } from "@/lib/anilist";
 import { Button } from "@/components/ui/button";
 
 type PosterItem = {
@@ -162,6 +164,24 @@ const FEATURE_STRIP = [
     subtitle: "Lock 12-ep sprints or long saga marathons.",
   },
 ] as const;
+
+const SPIN_FILTER_PRESETS = {
+  trending: {},
+  completed: { status: "FINISHED", completedOnly: true },
+  genreAction: { genre: "Action" },
+  airing: { status: "RELEASING" },
+  seasonal: { season: "WINTER", seasonYear: new Date().getFullYear() },
+  classic: { yearLessThan: 2010 },
+} satisfies Record<string, AnimeFilters>;
+
+const SPIN_FILTER_LABELS: Record<keyof typeof SPIN_FILTER_PRESETS, string> = {
+  trending: "Trending",
+  completed: "Completed",
+  genreAction: "Genre: Action",
+  airing: "Airing",
+  seasonal: "Seasonal",
+  classic: "Classic < 2010",
+};
 
 function ChaosHeader() {
   const logoRef = useRef<HTMLDivElement | null>(null);
@@ -378,24 +398,32 @@ function ChaosHeroSection() {
 }
 
 function SpinReactorSection() {
+  const {
+    filteredList,
+    selectedAnime,
+    isSpinning,
+    isLoading,
+    hasLoaded,
+    error,
+    loadAnime,
+    spin,
+  } = useSpinEngine();
+
   const ringRef = useRef<HTMLDivElement | null>(null);
   const pulseRef = useRef<HTMLSpanElement | null>(null);
   const sweepRef = useRef<HTMLSpanElement | null>(null);
   const spinButtonRef = useRef<HTMLDivElement | null>(null);
+  const wheelRotationRef = useRef(0);
+  const [activePreset, setActivePreset] = useState<keyof typeof SPIN_FILTER_PRESETS>("trending");
+
+  const activeFilters = useMemo(() => SPIN_FILTER_PRESETS[activePreset], [activePreset]);
+
+  useEffect(() => {
+    void loadAnime(activeFilters);
+  }, [activeFilters, loadAnime]);
 
   useEffect(() => {
     const running: Array<{ pause: () => void }> = [];
-
-    if (ringRef.current) {
-      running.push(
-        animate(ringRef.current, {
-          rotate: "1turn",
-          duration: 18000,
-          ease: "linear",
-          loop: true,
-        }),
-      );
-    }
 
     if (pulseRef.current) {
       running.push(
@@ -443,6 +471,31 @@ function SpinReactorSection() {
     });
   };
 
+  const onSpinClick = () => {
+    const result = spin(activeFilters);
+    if (!result || !ringRef.current) return;
+
+    const sliceCount = 10;
+    const sliceAngle = 360 / sliceCount;
+    const targetSlice = result.pickedIndex % sliceCount;
+    const targetSliceCenter = targetSlice * sliceAngle + sliceAngle / 2;
+    const targetNormalized = (270 - targetSliceCenter + 360) % 360;
+    const currentNormalized = ((wheelRotationRef.current % 360) + 360) % 360;
+    const delta = (targetNormalized - currentNormalized + 360) % 360;
+    const nextRotation = wheelRotationRef.current + 360 * 5 + delta;
+
+    gsap.to(ringRef.current, {
+      rotation: nextRotation,
+      duration: 1.8,
+      ease: "power3.inOut",
+      onComplete: () => {
+        wheelRotationRef.current = nextRotation;
+      },
+    });
+  };
+
+  const isEmpty = hasLoaded && !isLoading && !error && filteredList.length === 0;
+
   return (
     <section id="spin-reactor" className="py-12 md:py-20">
       <div className="mx-auto w-full max-w-[1400px] px-3 md:px-5">
@@ -454,6 +507,38 @@ function SpinReactorSection() {
             <p className="text-base font-bold uppercase tracking-wide text-white/84 md:text-lg">
               Too many choices? Spin.
             </p>
+
+            <div className="flex flex-wrap items-center justify-center gap-2">
+              {Object.keys(SPIN_FILTER_PRESETS).map((presetKey) => {
+                const key = presetKey as keyof typeof SPIN_FILTER_PRESETS;
+                return (
+                  <button
+                    key={key}
+                    type="button"
+                    className={`rounded-full px-3 py-1.5 text-[11px] font-black uppercase tracking-wide transition-colors ${
+                      activePreset === key
+                        ? "anispin-secondary-button text-white"
+                        : "bg-white/10 text-white/85 hover:bg-white/15"
+                    }`}
+                    onClick={() => setActivePreset(key)}
+                  >
+                    {SPIN_FILTER_LABELS[key]}
+                  </button>
+                );
+              })}
+            </div>
+
+            {error ? (
+              <div className="rounded-full border border-[#FF5E00]/50 bg-[#11162A]/90 px-4 py-2 text-xs font-bold text-white/90">
+                Unable to load anime. Try again later.
+              </div>
+            ) : null}
+
+            {isEmpty ? (
+              <div className="rounded-full border border-[#00F0FF]/45 bg-[#11162A]/90 px-4 py-2 text-xs font-bold text-white/90">
+                No matches found. Try different filters.
+              </div>
+            ) : null}
 
             <div className="relative mt-2 h-[min(76vw,520px)] w-[min(76vw,520px)]">
               <span
@@ -478,8 +563,12 @@ function SpinReactorSection() {
                   onMouseLeave={onSpinHoverEnd}
                   className="will-change-transform"
                 >
-                  <Button className="anispin-spin-button h-24 w-24 rounded-full text-xl font-black uppercase tracking-wider text-[#0B0F1A]">
-                    Spin
+                  <Button
+                    className="anispin-spin-button h-24 w-24 rounded-full text-xl font-black uppercase tracking-wider text-[#0B0F1A]"
+                    onClick={onSpinClick}
+                    disabled={isSpinning || isLoading || filteredList.length === 0}
+                  >
+                    {isSpinning ? "Spinning" : "Spin"}
                   </Button>
                 </div>
               </div>
@@ -488,6 +577,36 @@ function SpinReactorSection() {
             <p className="text-sm font-bold uppercase tracking-[0.14em] text-[#FF5E00]">
               Let the wheel decide.
             </p>
+
+            {!isSpinning && selectedAnime ? (
+              <article className="w-full max-w-2xl rounded-2xl border border-white/10 bg-[#11162A]/92 p-4">
+                <div className="flex items-start gap-4">
+                  {selectedAnime.poster ? (
+                    <img
+                      src={selectedAnime.poster}
+                      alt={selectedAnime.title}
+                      loading="lazy"
+                      decoding="async"
+                      className="h-32 w-24 rounded-lg object-cover"
+                    />
+                  ) : (
+                    <div className="h-32 w-24 rounded-lg bg-white/10" />
+                  )}
+                  <div className="min-w-0">
+                    <p className="anispin-display text-3xl text-white">{selectedAnime.title}</p>
+                    <p className="mt-1 text-xs font-semibold uppercase tracking-wide text-white/80">
+                      {selectedAnime.status ?? "Unknown Status"} | {selectedAnime.episodes ?? "?"} EPS
+                    </p>
+                    <p className="mt-2 text-sm font-semibold text-white/88">
+                      Score: {selectedAnime.score ?? "N/A"} | Popularity: {selectedAnime.popularity ?? "N/A"}
+                    </p>
+                    <p className="mt-2 text-xs font-medium text-white/78">
+                      {selectedAnime.genres.join(", ")}
+                    </p>
+                  </div>
+                </div>
+              </article>
+            ) : null}
           </div>
         </div>
       </div>
