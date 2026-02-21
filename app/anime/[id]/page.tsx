@@ -14,12 +14,6 @@ async function getAnime(id: string): Promise<Anime> {
   return res.json() as Promise<Anime>;
 }
 
-function formatStatus(status?: string) {
-  if (!status) return "UNKNOWN";
-  if (status === "RELEASING") return "AIRING";
-  return status;
-}
-
 function getPopularityTier(popularity?: number) {
   if (!popularity) return "Unknown";
   if (popularity < 5000) return "Hidden Gem";
@@ -27,6 +21,62 @@ function getPopularityTier(popularity?: number) {
   if (popularity < 60000) return "Popular";
   if (popularity < 150000) return "Very Popular";
   return "Mainstream Hit";
+}
+
+function getEpisodeDisplay(anime: Pick<Anime, "status" | "episodes">) {
+  if (anime.status === "RELEASING" && !anime.episodes) {
+    return "Ongoing";
+  }
+
+  if (!anime.episodes) {
+    return "Unknown";
+  }
+
+  return `${anime.episodes} Episodes`;
+}
+
+function getSeasonStatusLabel(status?: string) {
+  if (status === "FINISHED") return "Season Finished";
+  if (status === "RELEASING") return "Currently Airing";
+  if (status === "NOT_YET_RELEASED") return "Upcoming Season";
+  return "Season Status Unknown";
+}
+
+function getFranchiseIndicator(franchiseStatus?: Anime["franchiseStatus"]) {
+  if (franchiseStatus === "ONGOING") {
+    return {
+      label: "\uD83D\uDD01 Franchise Ongoing",
+      className: "border-[#00B8D8]/45 bg-[#00B8D8]/12 text-[#BDEFFF]",
+    };
+  }
+
+  if (franchiseStatus === "RETURNING") {
+    return {
+      label: "\uD83D\uDD52 New Season Announced",
+      className: "border-[#FFB648]/45 bg-[#FFB648]/14 text-[#FFE3B6]",
+    };
+  }
+
+  return {
+    label: "\u2714 Story Concluded",
+    className: "border-[#3BC97D]/45 bg-[#3BC97D]/14 text-[#C6F9DD]",
+  };
+}
+
+function getSeasonEntryLabel(anime: Anime) {
+  if (anime.hasPrequel) return "Season Entry";
+  if (anime.format === "TV") return "TV Series";
+  return anime.format ?? "Unknown Format";
+}
+
+function getRuntimeLabel(anime: Anime) {
+  if (!anime.episodes || !anime.duration) {
+    return "Total Runtime: Unknown";
+  }
+
+  const totalMinutes = anime.episodes * anime.duration;
+  const totalHours = (totalMinutes / 60).toFixed(1);
+  return `Total Runtime: ~${totalHours} Hours`;
 }
 
 export default async function AnimeDetailPage({
@@ -64,7 +114,12 @@ export default async function AnimeDetailPage({
     ? `${anime.season}${anime.seasonYear ? ` ${anime.seasonYear}` : ""}`
     : anime.seasonYear
       ? String(anime.seasonYear)
-      : "N/A";
+      : "Unknown";
+  const episodeDisplay = getEpisodeDisplay(anime);
+  const seasonStatusLabel = getSeasonStatusLabel(anime.status);
+  const franchiseBadge = getFranchiseIndicator(anime.franchiseStatus);
+  const seasonEntryLabel = getSeasonEntryLabel(anime);
+  const runtimeLabel = getRuntimeLabel(anime);
 
   return (
     <main className="min-h-screen bg-[#0B0F1A] text-white">
@@ -112,29 +167,26 @@ export default async function AnimeDetailPage({
                     "Not rated"
                   )}
                 </span>
-                <span className="rounded-full border border-[#00F0FF]/50 bg-[#11162A] px-3 py-1.5">
-                  {formatStatus(anime.status)}
+                <span className="rounded-full border border-white/20 bg-[#11162A]/90 px-3 py-1.5 text-white/88">
+                  {seasonStatusLabel}
+                </span>
+              </div>
+              <div className="flex flex-wrap items-center gap-2 text-xs font-bold uppercase tracking-wide">
+                <span className={`rounded-full border px-3 py-1.5 ${franchiseBadge.className}`}>
+                  {franchiseBadge.label}
                 </span>
               </div>
             </div>
 
-            <div className="grid gap-3 text-sm sm:grid-cols-2">
-              <div className="rounded-xl bg-[#11162A]/65 p-3">
-                <p className="text-[11px] font-black uppercase tracking-[0.14em] text-white/60">Format</p>
-                <p className="mt-1 text-sm font-semibold text-white/92">{anime.format ?? "N/A"}</p>
-              </div>
-              <div className="rounded-xl bg-[#11162A]/65 p-3">
-                <p className="text-[11px] font-black uppercase tracking-[0.14em] text-white/60">Season</p>
-                <p className="mt-1 text-sm font-semibold text-white/92">{seasonLabel}</p>
-              </div>
-              <div className="rounded-xl bg-[#11162A]/65 p-3">
-                <p className="text-[11px] font-black uppercase tracking-[0.14em] text-white/60">Episodes</p>
-                <p className="mt-1 text-sm font-semibold text-white/92">{anime.episodes ?? "N/A"}</p>
-              </div>
-              <div className="rounded-xl bg-[#11162A]/65 p-3">
-                <p className="text-[11px] font-black uppercase tracking-[0.14em] text-white/60">Year</p>
-                <p className="mt-1 text-sm font-semibold text-white/92">{anime.seasonYear ?? "N/A"}</p>
-              </div>
+            <div className="space-y-2 text-sm font-semibold text-white/90">
+              <p>{seasonEntryLabel}</p>
+              <p>{seasonLabel}</p>
+            </div>
+
+            <div className="space-y-1 border-t border-white/10 pt-4">
+              <p className="text-xs font-black uppercase tracking-[0.14em] text-white/70">This Season</p>
+              <p className="text-base font-semibold text-white/92">{episodeDisplay}</p>
+              <p className="text-sm font-semibold text-white/76">{runtimeLabel}</p>
             </div>
 
             <div className="space-y-2">

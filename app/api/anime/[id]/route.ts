@@ -19,6 +19,7 @@ type AniListMedia = {
   };
   bannerImage: string | null;
   episodes: number | null;
+  duration: number | null;
   status: string | null;
   genres: string[];
   averageScore: number | null;
@@ -26,6 +27,16 @@ type AniListMedia = {
   season: string | null;
   seasonYear: number | null;
   format: string | null;
+  relations: {
+    edges: Array<{
+      relationType: string | null;
+      node: {
+        id: number | null;
+        format: string | null;
+        status: string | null;
+      } | null;
+    } | null> | null;
+  } | null;
 };
 
 type AniListResponse = {
@@ -52,6 +63,7 @@ const query = gql`
       }
       bannerImage
       episodes
+      duration
       status
       genres
       averageScore
@@ -59,6 +71,16 @@ const query = gql`
       season
       seasonYear
       format
+      relations {
+        edges {
+          relationType
+          node {
+            id
+            format
+            status
+          }
+        }
+      }
     }
   }
 `;
@@ -87,6 +109,35 @@ export async function GET(
       return NextResponse.json({ error: "Poster not available" }, { status: 404 });
     }
 
+    const relationEdges = media.relations?.edges?.filter(
+      (edge): edge is NonNullable<typeof edge> => Boolean(edge),
+    ) ?? [];
+
+    const sequelEdges = relationEdges.filter(
+      (edge) =>
+        edge.relationType === "SEQUEL" &&
+        edge.node?.format === "TV",
+    );
+
+    let franchiseStatus: Anime["franchiseStatus"] = "CONCLUDED";
+
+    if (sequelEdges.length) {
+      const releasing = sequelEdges.find((edge) => edge.node?.status === "RELEASING");
+      const upcoming = sequelEdges.find((edge) => edge.node?.status === "NOT_YET_RELEASED");
+
+      if (releasing) {
+        franchiseStatus = "ONGOING";
+      } else if (upcoming) {
+        franchiseStatus = "RETURNING";
+      } else {
+        franchiseStatus = "ONGOING";
+      }
+    }
+
+    const hasPrequel = relationEdges.some(
+      (edge) => edge.relationType === "PREQUEL" && edge.node?.format === "TV",
+    );
+
     const transformed: Anime = {
       id: media.id,
       title:
@@ -98,6 +149,7 @@ export async function GET(
       poster,
       banner: media.bannerImage || null,
       episodes: media.episodes ?? undefined,
+      duration: media.duration ?? undefined,
       status: media.status ?? undefined,
       genres: media.genres,
       score: media.averageScore ?? undefined,
@@ -105,6 +157,8 @@ export async function GET(
       season: media.season ?? undefined,
       seasonYear: media.seasonYear ?? undefined,
       format: media.format ?? undefined,
+      franchiseStatus,
+      hasPrequel,
     };
 
     return NextResponse.json(transformed, {

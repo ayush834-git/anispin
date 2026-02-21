@@ -54,6 +54,18 @@ const FEATURE_STRIP = [
   },
 ] as const;
 
+const LENGTH_OPTIONS: Array<{
+  value: NonNullable<Filters["length"]>;
+  label: string;
+  range: string;
+}> = [
+  { value: "SHORT", label: "Short", range: "1-12 eps" },
+  { value: "MEDIUM", label: "Medium", range: "13-26 eps" },
+  { value: "LONG", label: "Long", range: "27-100 eps" },
+  { value: "VERY_LONG", label: "Very Long", range: "100+ eps" },
+  { value: "ONGOING", label: "Ongoing", range: "Releasing" },
+];
+
 const WHEEL_SIZE = 1000;
 const WHEEL_CENTER = WHEEL_SIZE / 2;
 const WHEEL_OUTER_RADIUS = 468;
@@ -115,6 +127,28 @@ function formatStatus(status?: string | null) {
   if (!status) return "UNKNOWN";
   if (status === "RELEASING") return "AIRING";
   return status;
+}
+
+function getEpisodeDisplay(anime: Pick<Anime, "status" | "episodes">) {
+  if (anime.status === "RELEASING" && !anime.episodes) {
+    return "Ongoing";
+  }
+
+  if (!anime.episodes) {
+    return "Unknown";
+  }
+
+  return `${anime.episodes} Episodes`;
+}
+
+function getCommitmentLabel(episodes?: number | null, status?: string) {
+  if (status === "RELEASING") return "Ongoing";
+  if (!episodes) return "Unknown";
+
+  if (episodes <= 12) return "Short";
+  if (episodes <= 26) return "Medium";
+  if (episodes <= 100) return "Long";
+  return "Saga";
 }
 
 function StatusBubble({ text }: { text: string }) {
@@ -760,6 +794,32 @@ function SpinReactorSection() {
               </button>
             </div>
 
+            <div className="w-full max-w-3xl rounded-2xl border border-white/10 bg-[#11162A]/60 p-3">
+              <p className="text-[11px] font-black uppercase tracking-[0.16em] text-white/70">Length</p>
+              <div className="mt-2 flex flex-wrap items-center gap-2">
+                {LENGTH_OPTIONS.map((option) => (
+                  <button
+                    key={option.value}
+                    type="button"
+                    className={`rounded-full px-3 py-1.5 text-[11px] font-black uppercase tracking-wide ${
+                      filters.length === option.value
+                        ? "anispin-secondary-button text-white"
+                        : "bg-white/10 text-white/85 hover:bg-white/15"
+                    }`}
+                    onClick={() =>
+                      setFilters((prev) => ({
+                        ...prev,
+                        length: prev.length === option.value ? undefined : option.value,
+                      }))
+                    }
+                  >
+                    {option.label}
+                    <span className="ml-1 text-white/70">({option.range})</span>
+                  </button>
+                ))}
+              </div>
+            </div>
+
             {error ? <StatusBubble text="Unable to load anime. Try again later." /> : null}
             {isEmpty ? <StatusBubble text="No matches found. Try different filters." /> : null}
 
@@ -925,10 +985,13 @@ function SpinReactorSection() {
                       <div className="min-w-0">
                         <p className="anispin-display text-3xl text-white">{selectedAnime.title}</p>
                         <p className="mt-1 text-xs font-semibold uppercase tracking-wide text-white/80">
-                          {formatStatus(selectedAnime.status)} | {selectedAnime.episodes ?? "?"} EPS
+                          {formatStatus(selectedAnime.status)} | {getEpisodeDisplay(selectedAnime)}
                         </p>
                         <p className="mt-2 text-sm font-semibold text-white/88">
-                          Score: {selectedAnime.score ?? "N/A"} | Popularity: {selectedAnime.popularity ?? "N/A"}
+                          Score: {selectedAnime.score ?? "Unknown"} | Popularity: {selectedAnime.popularity ?? "Unknown"}
+                        </p>
+                        <p className="mt-1 text-xs font-semibold uppercase tracking-wide text-white/66">
+                          Commitment: {getCommitmentLabel(selectedAnime.episodes, selectedAnime.status)}
                         </p>
                         <p className="mt-2 text-xs font-medium text-white/78">
                           {selectedAnime.genres.join(", ")}
@@ -1044,7 +1107,7 @@ function AnimeCollectionSection({
                           />
 
                           <span className="absolute left-2 top-2 rounded-md bg-[#0B0F1A]/78 px-2 py-0.5 text-[11px] font-bold text-[#00F0FF]">
-                            {anime.score ?? "N/A"}
+                            {anime.score ?? "Unknown"}
                           </span>
                           <span className="absolute right-2 top-2 rounded-md bg-[#0B0F1A]/78 px-2 py-0.5 text-[11px] font-bold text-[#FF5E00]">
                             {formatStatus(anime.status)}
@@ -1068,7 +1131,10 @@ function AnimeCollectionSection({
                         >
                           <p className="text-sm font-black uppercase text-white">{anime.title}</p>
                           <p className="mt-1 text-xs font-semibold text-white/82">
-                            Rating {anime.score ?? "N/A"} | {anime.episodes ?? "?"} EPS
+                            Rating {anime.score ?? "Unknown"} | {getEpisodeDisplay(anime)}
+                          </p>
+                          <p className="mt-1 text-[11px] font-semibold uppercase tracking-wide text-white/66">
+                            Commitment: {getCommitmentLabel(anime.episodes, anime.status)}
                           </p>
                           <p className="mt-2 text-xs leading-relaxed text-white/72">
                             {anime.genres.join(", ")}
@@ -1107,7 +1173,7 @@ function AnimeCollectionSection({
                         />
                         <div className="min-w-0">
                           <p className="truncate text-xs font-bold uppercase text-white">{anime.title}</p>
-                          <p className="text-[11px] font-semibold text-[#00F0FF]">{anime.score ?? "N/A"}</p>
+                          <p className="text-[11px] font-semibold text-[#00F0FF]">{anime.score ?? "Unknown"}</p>
                         </div>
                       </div>
                     </Link>

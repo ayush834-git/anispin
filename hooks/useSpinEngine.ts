@@ -8,16 +8,57 @@ type SpinResult = {
   pickedIndex: number;
 } | null;
 
+function matchesGenre(anime: Anime, genre?: string) {
+  if (!genre) return true;
+  return anime.genres.includes(genre);
+}
+
+function matchesStatus(anime: Anime, status?: Filters["status"]) {
+  if (!status) return true;
+  if (status === "AIRING") return anime.status === "RELEASING";
+  return anime.status === "FINISHED";
+}
+
+function matchesLength(anime: Anime, length?: Filters["length"]) {
+  if (!length) return true;
+
+  if (length === "ONGOING") {
+    return anime.status === "RELEASING";
+  }
+
+  if (!anime.episodes) return false;
+
+  if (length === "SHORT") return anime.episodes <= 12;
+  if (length === "MEDIUM") return anime.episodes >= 13 && anime.episodes <= 26;
+  if (length === "LONG") return anime.episodes >= 27 && anime.episodes <= 100;
+  if (length === "VERY_LONG") return anime.episodes > 100;
+
+  return true;
+}
+
 export function useSpinEngine(filters: Filters) {
-  const { animeList, isLoading, error } = useAnimeQuery(filters, 400);
-  const [filteredList, setFilteredList] = useState<Anime[]>([]);
+  const queryFilters = useMemo<Filters>(() => ({
+    genre: filters.genre,
+    status: filters.status,
+    seasonal: filters.seasonal,
+    classic: filters.classic,
+  }), [filters.classic, filters.genre, filters.seasonal, filters.status]);
+
+  const { animeList, isLoading, error } = useAnimeQuery(queryFilters, 400);
   const [selectedAnime, setSelectedAnime] = useState<Anime | null>(null);
   const [isSpinning, setIsSpinning] = useState(false);
   const spinTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-  useEffect(() => {
-    setFilteredList(animeList);
-  }, [animeList]);
+  const filteredList = useMemo(
+    () =>
+      animeList.filter(
+        (anime) =>
+          matchesGenre(anime, filters.genre) &&
+          matchesStatus(anime, filters.status) &&
+          matchesLength(anime, filters.length),
+      ),
+    [animeList, filters.genre, filters.length, filters.status],
+  );
 
   useEffect(() => {
     return () => {

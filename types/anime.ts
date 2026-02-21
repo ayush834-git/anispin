@@ -5,6 +5,7 @@ export type Anime = {
   poster: string;
   banner?: string | null;
   episodes?: number;
+  duration?: number;
   status?: string;
   genres: string[];
   score?: number;
@@ -12,6 +13,8 @@ export type Anime = {
   season?: string;
   seasonYear?: number;
   format?: string;
+  franchiseStatus?: "ONGOING" | "RETURNING" | "CONCLUDED";
+  hasPrequel?: boolean;
 };
 
 export type Filters = {
@@ -19,4 +22,5 @@ export type Filters = {
   status?: "AIRING" | "FINISHED";
   seasonal?: boolean;
   classic?: boolean;
+  length?: "SHORT" | "MEDIUM" | "LONG" | "VERY_LONG" | "ONGOING";
 };
