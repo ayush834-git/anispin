@@ -4,6 +4,11 @@ export type Anime = {
   description: string;
   poster: string;
   banner?: string | null;
+  trailer?: {
+    id: string;
+    site: string;
+    thumbnail?: string | null;
+  } | null;
   episodes?: number;
   status?: string;
   genres: string[];
@@ -21,9 +26,7 @@ export type Anime = {
         poster: string;
         episodes?: number;
         status?: string;
-        startDate?: {
-          year?: number;
-        };
+        seasonYear?: number;
         format?: string;
       };
     }>;

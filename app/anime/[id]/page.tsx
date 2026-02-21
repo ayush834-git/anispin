@@ -3,6 +3,7 @@ import Link from "next/link";
 
 import { type Anime } from "@/types/anime";
 
+import { FranchiseEntriesStrip } from "./franchise-entries-strip";
 import { WatchSearchButton } from "./watch-search-button";
 
 async function getAnime(id: string): Promise<Anime> {
@@ -87,15 +88,31 @@ export default async function AnimeDetailPage({
   const episodeDisplay = getEpisodeDisplay(anime);
   const seasonStatusLabel = getSeasonStatusLabel(anime.status);
   const isMainstreamHit = popularityTier === "Mainstream Hit";
-  const relatedTV =
-    anime.relations?.edges?.filter(
-      (edge) => edge.node.format === "TV" && edge.node.id !== anime.id,
-    )
+  const isYouTubeTrailer =
+    Boolean(anime.trailer?.id) &&
+    anime.trailer?.site?.toLowerCase() === "youtube";
+  const trailerThumbnail = isYouTubeTrailer
+    ? anime.trailer?.thumbnail || `https://img.youtube.com/vi/${anime.trailer?.id}/hqdefault.jpg`
+    : null;
+  const trailerUrl = isYouTubeTrailer
+    ? `https://www.youtube.com/watch?v=${anime.trailer?.id}`
+    : null;
+  const franchiseEntries =
+    anime.relations?.edges
+      ?.filter((edge) => edge.node.id !== anime.id)
       .sort((a, b) => {
-        const ay = a.node.startDate?.year ?? Number.POSITIVE_INFINITY;
-        const by = b.node.startDate?.year ?? Number.POSITIVE_INFINITY;
+        const ay = a.node.seasonYear ?? Number.POSITIVE_INFINITY;
+        const by = b.node.seasonYear ?? Number.POSITIVE_INFINITY;
         return ay - by;
       }) ?? [];
+  const franchiseEntryCards = franchiseEntries.map(({ node }) => ({
+    id: node.id,
+    title: node.title,
+    poster: node.poster,
+    seasonYear: node.seasonYear,
+    statusLabel: getRelatedStatusLabel(node.status),
+    episodesLabel: getEpisodeDisplay(node),
+  }));
 
   return (
     <main className="min-h-screen bg-[#0B0F1A] text-white">
@@ -167,41 +184,7 @@ export default async function AnimeDetailPage({
               </p>
             </div>
 
-            {relatedTV.length ? (
-              <div className="space-y-3 border-t border-white/10 pt-4">
-                <p className="text-xs font-black uppercase tracking-[0.14em] text-white/70">
-                  More in This Series
-                </p>
-                <div className="flex flex-col gap-3 md:flex-row md:gap-4 md:overflow-x-auto md:pb-2">
-                  {relatedTV.map(({ node }) => (
-                    <Link
-                      key={node.id}
-                      href={`/anime/${node.id}`}
-                      className="group rounded-xl border border-white/12 bg-[#11162A]/70 p-2 transition hover:border-[#00F0FF]/55 md:w-[300px] md:flex-shrink-0"
-                    >
-                      <div className="flex gap-3">
-                        <Image
-                          src={node.poster}
-                          alt={node.title}
-                          width={88}
-                          height={124}
-                          className="h-[124px] w-[88px] rounded-lg object-cover"
-                          loading="lazy"
-                        />
-                        <div className="min-w-0 space-y-1.5 text-xs font-semibold text-white/80">
-                          <p className="line-clamp-2 text-sm font-black uppercase tracking-wide text-white/94">
-                            {node.title}
-                          </p>
-                          <p>{node.startDate?.year ?? "Year Unknown"}</p>
-                          <p>{getRelatedStatusLabel(node.status)}</p>
-                          <p>{getEpisodeDisplay(node)}</p>
-                        </div>
-                      </div>
-                    </Link>
-                  ))}
-                </div>
-              </div>
-            ) : null}
+            <FranchiseEntriesStrip entries={franchiseEntryCards} />
           </div>
         </div>
 
@@ -209,6 +192,42 @@ export default async function AnimeDetailPage({
           <article className="rounded-2xl bg-[#11162A]/56 p-6 md:p-7">
             <h3 className="mb-4 text-sm font-black uppercase tracking-[0.14em] text-white/85">Description</h3>
             <p className="text-[15px] leading-8 text-white/88">{description}</p>
+
+            {isYouTubeTrailer && trailerUrl && trailerThumbnail ? (
+              <div className="mt-6 space-y-3 border-t border-white/10 pt-6">
+                <h3 className="text-lg font-semibold text-white">Trailer</h3>
+                <a
+                  href={trailerUrl}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="group block w-full max-w-[480px]"
+                  aria-label={`Watch trailer for ${anime.title}`}
+                >
+                  <div className="relative aspect-video w-full overflow-hidden rounded-md">
+                    <Image
+                      src={trailerThumbnail}
+                      alt={`Trailer thumbnail for ${anime.title}`}
+                      fill
+                      sizes="(max-width: 768px) 100vw, 480px"
+                      className="object-cover transition-transform duration-200 group-hover:scale-[1.03]"
+                    />
+                    <div className="absolute inset-0 flex items-center justify-center bg-black/45 opacity-0 transition-opacity duration-200 group-hover:opacity-100">
+                      <span className="text-3xl font-bold text-white">▶</span>
+                    </div>
+                  </div>
+                </a>
+                <a
+                  href={trailerUrl}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="anispin-secondary-button inline-flex h-9 items-center rounded-full px-4 text-xs font-black uppercase text-white"
+                >
+                  Watch Trailer
+                </a>
+              </div>
+            ) : (
+              <p className="mt-6 text-sm text-white/50">Trailer not available for this title.</p>
+            )}
           </article>
         </div>
 
