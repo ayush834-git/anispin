@@ -262,7 +262,7 @@ html.lenis body {
 .anispin-wheel-ring {
   position: relative;
   border-radius: 999px;
-  transform: rotateX(10deg);
+  transform: rotateX(10deg) rotate(var(--wheel-rotation, 0deg));
   transform-style: preserve-3d;
   will-change: transform, filter;
   filter: blur(var(--spin-blur, 0px));

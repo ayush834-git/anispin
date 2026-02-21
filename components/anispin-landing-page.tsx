@@ -407,6 +407,7 @@ function SpinReactorSection() {
   } = useSpinEngine(filters);
 
   const ringRef = useRef<HTMLDivElement | null>(null);
+  const wheelMotionRef = useRef<HTMLDivElement | null>(null);
   const pulseRef = useRef<HTMLSpanElement | null>(null);
   const sweepRef = useRef<HTMLSpanElement | null>(null);
   const innerRingRef = useRef<HTMLDivElement | null>(null);
@@ -475,7 +476,13 @@ function SpinReactorSection() {
 
     stopSpinFrame();
     previousRotationRef.current =
-      Number(gsap.getProperty(ringRef.current, "rotation")) || wheelRotationRef.current;
+      Number.parseFloat(
+        window
+          .getComputedStyle(ringRef.current)
+          .getPropertyValue("--wheel-rotation")
+          .replace("deg", "")
+          .trim(),
+      ) || wheelRotationRef.current;
 
     const updateFrame = (time: number) => {
       if (!ringRef.current) {
@@ -485,7 +492,14 @@ function SpinReactorSection() {
 
       const previousTime = previousFrameTimeRef.current ?? time;
       const elapsed = Math.max(16, time - previousTime);
-      const currentRotation = Number(gsap.getProperty(ringRef.current, "rotation")) || 0;
+      const currentRotation =
+        Number.parseFloat(
+          window
+            .getComputedStyle(ringRef.current)
+            .getPropertyValue("--wheel-rotation")
+            .replace("deg", "")
+            .trim(),
+        ) || 0;
       const rotationDelta = Math.abs(currentRotation - previousRotationRef.current);
       const velocity = rotationDelta / (elapsed / 16.67);
       const intensity = Math.min(1, velocity / 18);
@@ -503,6 +517,16 @@ function SpinReactorSection() {
 
     spinRafRef.current = window.requestAnimationFrame(updateFrame);
   }, [stopSpinFrame]);
+
+  useEffect(() => {
+    if (ringRef.current) {
+      gsap.set(ringRef.current, { transformOrigin: "50% 50%" });
+      gsap.set(ringRef.current, { "--wheel-rotation": "0deg" });
+    }
+    if (wheelMotionRef.current) {
+      gsap.set(wheelMotionRef.current, { transformOrigin: "50% 50%" });
+    }
+  }, []);
 
   useEffect(() => {
     const running: Array<{ pause: () => void }> = [];
@@ -625,7 +649,6 @@ function SpinReactorSection() {
     startSpinFrame();
 
     gsap.timeline({
-      defaults: { overwrite: true },
       onComplete: () => {
         wheelRotationRef.current = nextRotation;
         stopSpinFrame();
@@ -651,7 +674,7 @@ function SpinReactorSection() {
       },
     })
       .to(
-        ringRef.current,
+        wheelMotionRef.current,
         {
           scale: 1.05,
           duration: 0.28,
@@ -662,14 +685,14 @@ function SpinReactorSection() {
       .to(
         ringRef.current,
         {
-          rotation: nextRotation,
+          "--wheel-rotation": `${nextRotation}deg`,
           duration: SPIN_DURATION_MS / 1000,
           ease: "power4.out",
         },
         0,
       )
       .to(
-        ringRef.current,
+        wheelMotionRef.current,
         {
           scale: 1,
           duration: 0.34,
@@ -750,7 +773,10 @@ function SpinReactorSection() {
             {error ? <StatusBubble text="Unable to load anime. Try again later." /> : null}
             {isEmpty ? <StatusBubble text="No matches found. Try different filters." /> : null}
 
-            <div className="anispin-wheel-scene relative mt-2 h-[min(76vw,520px)] w-[min(76vw,520px)]">
+            <div
+              ref={wheelMotionRef}
+              className="anispin-wheel-scene relative mt-2 h-[min(76vw,520px)] w-[min(76vw,520px)]"
+            >
               <div className="anispin-wheel-pointer" aria-hidden />
               <span
                 ref={pulseRef}
@@ -770,6 +796,7 @@ function SpinReactorSection() {
                   {
                     "--spin-blur": "0px",
                     "--spin-glow-strength": "0.38",
+                    "--wheel-rotation": "0deg",
                   } as CSSProperties
                 }
               >
