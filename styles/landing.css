@@ -207,7 +207,11 @@ html.lenis body {
 }
 
 .anispin-wheel-scene {
-  perspective: 1200px;
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
 }
 
 .anispin-wheel-aura {
@@ -230,17 +234,21 @@ html.lenis body {
 
 .anispin-wheel-ring {
   position: relative;
-  border-radius: 999px;
-  transform-style: preserve-3d;
-  transform: rotateX(10deg);
+  width: 100%;
+  height: 100%;
+  border-radius: 50%;
+  overflow: hidden;
 }
 
 .anispin-wheel-rotor {
   position: relative;
-  border-radius: 999px;
+  width: 100%;
+  height: 100%;
+  border-radius: 50%;
+  overflow: hidden;
+  transform-origin: 50% 50%;
   will-change: transform, filter;
   filter: blur(var(--spin-blur, 0px));
-  transform: translateZ(0);
 }
 
 .anispin-wheel-rotor::before {
@@ -369,10 +377,6 @@ html.lenis body {
 }
 
 @media (max-width: 768px) {
-  .anispin-wheel-ring {
-    transform: rotateX(8deg);
-  }
-
   .anispin-wheel-label {
     font-size: 20px;
     stroke-width: 3.2px;

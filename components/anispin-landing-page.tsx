@@ -441,7 +441,6 @@ function SpinReactorSection() {
   } = useSpinEngine(filters);
 
   const ringRef = useRef<HTMLDivElement | null>(null);
-  const wheelMotionRef = useRef<HTMLDivElement | null>(null);
   const pulseRef = useRef<HTMLSpanElement | null>(null);
   const sweepRef = useRef<HTMLSpanElement | null>(null);
   const innerRingRef = useRef<HTMLDivElement | null>(null);
@@ -546,9 +545,6 @@ function SpinReactorSection() {
         rotation: 0,
         force3D: true,
       });
-    }
-    if (wheelMotionRef.current) {
-      gsap.set(wheelMotionRef.current, { transformOrigin: "50% 50%" });
     }
   }, []);
 
@@ -698,31 +694,13 @@ function SpinReactorSection() {
       },
     })
       .to(
-        wheelMotionRef.current,
-        {
-          scale: 1.05,
-          duration: 0.28,
-          ease: "power2.out",
-        },
-        0,
-      )
-      .to(
         ringRef.current,
         {
           rotation: nextRotation,
           duration: SPIN_DURATION_MS / 1000,
           ease: "power4.out",
         },
-        0,
-      )
-      .to(
-        wheelMotionRef.current,
-        {
-          scale: 1,
-          duration: 0.34,
-          ease: "power2.in",
-        },
-        SPIN_DURATION_MS / 1000 - 0.34,
+        0
       );
   };
 
@@ -823,10 +801,7 @@ function SpinReactorSection() {
             {error ? <StatusBubble text="Unable to load anime. Try again later." /> : null}
             {isEmpty ? <StatusBubble text="No matches found. Try different filters." /> : null}
 
-            <div
-              ref={wheelMotionRef}
-              className="anispin-wheel-scene relative mt-2 h-[min(76vw,520px)] w-[min(76vw,520px)]"
-            >
+            <div className="anispin-wheel-scene relative mt-2 h-[min(76vw,520px)] w-[min(76vw,520px)]">
               <span
                 ref={pulseRef}
                 className="anispin-wheel-aura pointer-events-none absolute inset-[8%] rounded-full"
