@@ -476,13 +476,7 @@ function SpinReactorSection() {
 
     stopSpinFrame();
     previousRotationRef.current =
-      Number.parseFloat(
-        window
-          .getComputedStyle(ringRef.current)
-          .getPropertyValue("--wheel-rotation")
-          .replace("deg", "")
-          .trim(),
-      ) || wheelRotationRef.current;
+      Number(gsap.getProperty(ringRef.current, "rotation")) || wheelRotationRef.current;
 
     const updateFrame = (time: number) => {
       if (!ringRef.current) {
@@ -492,14 +486,7 @@ function SpinReactorSection() {
 
       const previousTime = previousFrameTimeRef.current ?? time;
       const elapsed = Math.max(16, time - previousTime);
-      const currentRotation =
-        Number.parseFloat(
-          window
-            .getComputedStyle(ringRef.current)
-            .getPropertyValue("--wheel-rotation")
-            .replace("deg", "")
-            .trim(),
-        ) || 0;
+      const currentRotation = Number(gsap.getProperty(ringRef.current, "rotation")) || 0;
       const rotationDelta = Math.abs(currentRotation - previousRotationRef.current);
       const velocity = rotationDelta / (elapsed / 16.67);
       const intensity = Math.min(1, velocity / 18);
@@ -520,8 +507,11 @@ function SpinReactorSection() {
 
   useEffect(() => {
     if (ringRef.current) {
-      gsap.set(ringRef.current, { transformOrigin: "50% 50%" });
-      gsap.set(ringRef.current, { "--wheel-rotation": "0deg" });
+      gsap.set(ringRef.current, {
+        transformOrigin: "50% 50%",
+        rotation: 0,
+        force3D: true,
+      });
     }
     if (wheelMotionRef.current) {
       gsap.set(wheelMotionRef.current, { transformOrigin: "50% 50%" });
@@ -685,7 +675,7 @@ function SpinReactorSection() {
       .to(
         ringRef.current,
         {
-          "--wheel-rotation": `${nextRotation}deg`,
+          rotation: nextRotation,
           duration: SPIN_DURATION_MS / 1000,
           ease: "power4.out",
         },
@@ -777,7 +767,6 @@ function SpinReactorSection() {
               ref={wheelMotionRef}
               className="anispin-wheel-scene relative mt-2 h-[min(76vw,520px)] w-[min(76vw,520px)]"
             >
-              <div className="anispin-wheel-pointer" aria-hidden />
               <span
                 ref={pulseRef}
                 className="anispin-wheel-aura pointer-events-none absolute inset-[8%] rounded-full"
@@ -789,17 +778,17 @@ function SpinReactorSection() {
                 aria-hidden
               />
 
-              <div
-                ref={ringRef}
-                className={`anispin-wheel-ring absolute inset-0 ${isSpinning ? "is-spinning" : ""}`}
-                style={
-                  {
-                    "--spin-blur": "0px",
-                    "--spin-glow-strength": "0.38",
-                    "--wheel-rotation": "0deg",
-                  } as CSSProperties
-                }
-              >
+              <div className="anispin-wheel-ring absolute inset-0">
+                <div
+                  ref={ringRef}
+                  className={`anispin-wheel-rotor absolute inset-0 ${isSpinning ? "is-spinning" : ""}`}
+                  style={
+                    {
+                      "--spin-blur": "0px",
+                      "--spin-glow-strength": "0.38",
+                    } as CSSProperties
+                  }
+                >
                 <svg
                   viewBox={`0 0 ${WHEEL_SIZE} ${WHEEL_SIZE}`}
                   className="h-full w-full"
@@ -878,6 +867,7 @@ function SpinReactorSection() {
                   className="anispin-wheel-inner-ring absolute inset-[16%] rounded-full"
                 />
                 <div className="anispin-wheel-reflection pointer-events-none absolute inset-[11%] rounded-full" />
+                </div>
               </div>
 
               <div className="absolute inset-0 flex items-center justify-center">
