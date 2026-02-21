@@ -4,6 +4,7 @@ import Link from "next/link";
 import { type Anime } from "@/types/anime";
 
 import { FranchiseEntriesStrip } from "./franchise-entries-strip";
+import { TrailerSection } from "./trailer-section";
 import { WatchSearchButton } from "./watch-search-button";
 
 async function getAnime(id: string): Promise<Anime> {
@@ -88,15 +89,6 @@ export default async function AnimeDetailPage({
   const episodeDisplay = getEpisodeDisplay(anime);
   const seasonStatusLabel = getSeasonStatusLabel(anime.status);
   const isMainstreamHit = popularityTier === "Mainstream Hit";
-  const isYouTubeTrailer =
-    Boolean(anime.trailer?.id) &&
-    anime.trailer?.site?.toLowerCase() === "youtube";
-  const trailerThumbnail = isYouTubeTrailer
-    ? anime.trailer?.thumbnail || `https://img.youtube.com/vi/${anime.trailer?.id}/hqdefault.jpg`
-    : null;
-  const trailerUrl = isYouTubeTrailer
-    ? `https://www.youtube.com/watch?v=${anime.trailer?.id}`
-    : null;
   const franchiseEntries =
     anime.relations?.edges
       ?.filter((edge) => edge.node.id !== anime.id)
@@ -105,6 +97,7 @@ export default async function AnimeDetailPage({
         const by = b.node.seasonYear ?? Number.POSITIVE_INFINITY;
         return ay - by;
       }) ?? [];
+
   const franchiseEntryCards = franchiseEntries.map(({ node }) => ({
     id: node.id,
     title: node.title,
@@ -192,45 +185,9 @@ export default async function AnimeDetailPage({
           <article className="rounded-2xl bg-[#11162A]/56 p-6 md:p-7">
             <h3 className="mb-4 text-sm font-black uppercase tracking-[0.14em] text-white/85">Description</h3>
             <p className="text-[15px] leading-8 text-white/88">{description}</p>
-
-            {isYouTubeTrailer && trailerUrl && trailerThumbnail ? (
-              <div className="mt-6 space-y-3 border-t border-white/10 pt-6">
-                <h3 className="text-lg font-semibold text-white">Trailer</h3>
-                <a
-                  href={trailerUrl}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="group block w-full max-w-[480px]"
-                  aria-label={`Watch trailer for ${anime.title}`}
-                >
-                  <div className="relative aspect-video w-full overflow-hidden rounded-md">
-                    <Image
-                      src={trailerThumbnail}
-                      alt={`Trailer thumbnail for ${anime.title}`}
-                      fill
-                      sizes="(max-width: 768px) 100vw, 480px"
-                      className="object-cover transition-transform duration-200 group-hover:scale-[1.03]"
-                    />
-                    <div className="absolute inset-0 flex items-center justify-center bg-black/45 opacity-0 transition-opacity duration-200 group-hover:opacity-100">
-                      <span className="text-3xl font-bold text-white">▶</span>
-                    </div>
-                  </div>
-                </a>
-                <a
-                  href={trailerUrl}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="anispin-secondary-button inline-flex h-9 items-center rounded-full px-4 text-xs font-black uppercase text-white"
-                >
-                  Watch Trailer
-                </a>
-              </div>
-            ) : (
-              <p className="mt-6 text-sm text-white/50">Trailer not available for this title.</p>
-            )}
+            <TrailerSection anime={anime} />
           </article>
         </div>
-
       </section>
     </main>
   );
