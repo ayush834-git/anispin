@@ -20,6 +20,15 @@ function formatStatus(status?: string) {
   return status;
 }
 
+function getPopularityTier(popularity?: number) {
+  if (!popularity) return "Unknown";
+  if (popularity < 5000) return "Hidden Gem";
+  if (popularity < 20000) return "Niche Pick";
+  if (popularity < 60000) return "Popular";
+  if (popularity < 150000) return "Very Popular";
+  return "Mainstream Hit";
+}
+
 export default async function AnimeDetailPage({
   params,
 }: {
@@ -49,6 +58,13 @@ export default async function AnimeDetailPage({
   }
 
   const description = anime.description?.trim() || "No description available.";
+  const score10 = typeof anime.score === "number" ? (anime.score / 10).toFixed(1) : null;
+  const popularityTier = getPopularityTier(anime.popularity);
+  const seasonLabel = anime.season
+    ? `${anime.season}${anime.seasonYear ? ` ${anime.seasonYear}` : ""}`
+    : anime.seasonYear
+      ? String(anime.seasonYear)
+      : "N/A";
 
   return (
     <main className="min-h-screen bg-[#0B0F1A] text-white">
@@ -83,32 +99,53 @@ export default async function AnimeDetailPage({
             />
           </div>
 
-          <div className="space-y-5">
-            <div className="space-y-2">
+          <div className="space-y-6">
+            <div className="space-y-3">
               <h2 className="anispin-display text-4xl md:text-5xl">{anime.title}</h2>
-              <div className="flex flex-wrap gap-2 text-xs font-bold uppercase tracking-wide">
-                <span className="rounded-full border border-white/20 bg-[#11162A] px-3 py-1.5">
-                  ⭐ {anime.score ?? "N/A"}
-                </span>
-                <span className="rounded-full border border-white/20 bg-[#11162A] px-3 py-1.5">
-                  📊 {anime.popularity ?? "N/A"}
+              <div className="flex flex-wrap items-center gap-2 text-xs font-bold uppercase tracking-wide">
+                <span className="rounded-full border border-white/20 bg-[#11162A] px-3 py-1.5 text-white/95">
+                  {score10 ? (
+                    <>
+                      {"\u2B50"} {score10} / 10
+                    </>
+                  ) : (
+                    "Not rated"
+                  )}
                 </span>
                 <span className="rounded-full border border-[#00F0FF]/50 bg-[#11162A] px-3 py-1.5">
-                  📺 {formatStatus(anime.status)}
-                </span>
-                <span className="rounded-full border border-[#FF5E00]/50 bg-[#11162A] px-3 py-1.5">
-                  🎬 {anime.format ?? "N/A"}
+                  {formatStatus(anime.status)}
                 </span>
               </div>
             </div>
 
-            <div className="grid gap-2 text-sm font-semibold text-white/90 sm:grid-cols-2">
-              <p>Format: {anime.format ?? "N/A"}</p>
-              <p>Season: {anime.season ?? "N/A"} {anime.seasonYear ?? ""}</p>
-              <p>Episodes: {anime.episodes ?? "N/A"}</p>
-              <p>Status: {formatStatus(anime.status)}</p>
-              <p>Score: {anime.score ?? "N/A"}</p>
-              <p>Popularity: {anime.popularity ?? "N/A"}</p>
+            <div className="grid gap-3 text-sm sm:grid-cols-2">
+              <div className="rounded-xl bg-[#11162A]/65 p-3">
+                <p className="text-[11px] font-black uppercase tracking-[0.14em] text-white/60">Format</p>
+                <p className="mt-1 text-sm font-semibold text-white/92">{anime.format ?? "N/A"}</p>
+              </div>
+              <div className="rounded-xl bg-[#11162A]/65 p-3">
+                <p className="text-[11px] font-black uppercase tracking-[0.14em] text-white/60">Season</p>
+                <p className="mt-1 text-sm font-semibold text-white/92">{seasonLabel}</p>
+              </div>
+              <div className="rounded-xl bg-[#11162A]/65 p-3">
+                <p className="text-[11px] font-black uppercase tracking-[0.14em] text-white/60">Episodes</p>
+                <p className="mt-1 text-sm font-semibold text-white/92">{anime.episodes ?? "N/A"}</p>
+              </div>
+              <div className="rounded-xl bg-[#11162A]/65 p-3">
+                <p className="text-[11px] font-black uppercase tracking-[0.14em] text-white/60">Year</p>
+                <p className="mt-1 text-sm font-semibold text-white/92">{anime.seasonYear ?? "N/A"}</p>
+              </div>
+            </div>
+
+            <div className="space-y-2">
+              <span className="inline-flex rounded-full border border-[#FF5E00]/45 bg-[#FF5E00]/12 px-3 py-1.5 text-xs font-black uppercase tracking-wide text-[#FFD3B8]">
+                {popularityTier}
+              </span>
+              {anime.popularity ? (
+                <p className="text-xs font-semibold text-white/58">
+                  Added by {anime.popularity.toLocaleString()} users
+                </p>
+              ) : null}
             </div>
 
             <div className="flex flex-wrap gap-2">
@@ -124,12 +161,13 @@ export default async function AnimeDetailPage({
           </div>
         </div>
 
-        <div className="mx-auto mt-8 w-full max-w-6xl rounded-xl border border-white/10 bg-[#11162A]/70 p-5">
-          <h3 className="mb-3 text-sm font-black uppercase tracking-[0.14em] text-white/85">Description</h3>
-          <p className="text-sm leading-relaxed text-white/88">{description}</p>
+        <div className="mx-auto mt-10 w-full max-w-6xl border-t border-white/10 pt-8">
+          <article className="rounded-2xl bg-[#11162A]/56 p-6 md:p-7">
+            <h3 className="mb-4 text-sm font-black uppercase tracking-[0.14em] text-white/85">Description</h3>
+            <p className="text-[15px] leading-8 text-white/88">{description}</p>
+          </article>
         </div>
       </section>
     </main>
   );
 }
-
