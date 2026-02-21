@@ -32,8 +32,19 @@ type AniListMedia = {
       relationType: string | null;
       node: {
         id: number | null;
+        title: {
+          english: string | null;
+          romaji: string | null;
+          native: string | null;
+        } | null;
+        coverImage: {
+          extraLarge: string | null;
+          large: string | null;
+        } | null;
+        episodes: number | null;
         format: string | null;
         status: string | null;
+        seasonYear: number | null;
       } | null;
     } | null> | null;
   } | null;
@@ -76,8 +87,19 @@ const query = gql`
           relationType
           node {
             id
+            title {
+              english
+              romaji
+              native
+            }
+            coverImage {
+              extraLarge
+              large
+            }
+            episodes
             format
             status
+            seasonYear
           }
         }
       }
@@ -109,34 +131,33 @@ export async function GET(
       return NextResponse.json({ error: "Poster not available" }, { status: 404 });
     }
 
-    const relationEdges = media.relations?.edges?.filter(
-      (edge): edge is NonNullable<typeof edge> => Boolean(edge),
-    ) ?? [];
+    const relationEdges = (media.relations?.edges ?? [])
+      .filter((edge): edge is NonNullable<typeof edge> => Boolean(edge?.node?.id))
+      .map((edge) => {
+        const node = edge.node!;
+        const relationPoster = node.coverImage?.extraLarge || node.coverImage?.large;
+        if (!relationPoster) {
+          return null;
+        }
 
-    const sequelEdges = relationEdges.filter(
-      (edge) =>
-        edge.relationType === "SEQUEL" &&
-        edge.node?.format === "TV",
-    );
-
-    let franchiseStatus: Anime["franchiseStatus"] = "CONCLUDED";
-
-    if (sequelEdges.length) {
-      const releasing = sequelEdges.find((edge) => edge.node?.status === "RELEASING");
-      const upcoming = sequelEdges.find((edge) => edge.node?.status === "NOT_YET_RELEASED");
-
-      if (releasing) {
-        franchiseStatus = "ONGOING";
-      } else if (upcoming) {
-        franchiseStatus = "RETURNING";
-      } else {
-        franchiseStatus = "ONGOING";
-      }
-    }
-
-    const hasPrequel = relationEdges.some(
-      (edge) => edge.relationType === "PREQUEL" && edge.node?.format === "TV",
-    );
+        return {
+          relationType: edge.relationType ?? undefined,
+          node: {
+            id: node.id!,
+            title:
+              node.title?.english ||
+              node.title?.romaji ||
+              node.title?.native ||
+              "Unknown Title",
+            poster: relationPoster,
+            episodes: node.episodes ?? undefined,
+            status: node.status ?? undefined,
+            seasonYear: node.seasonYear ?? undefined,
+            format: node.format ?? undefined,
+          },
+        };
+      })
+      .filter((edge): edge is NonNullable<typeof edge> => Boolean(edge));
 
     const transformed: Anime = {
       id: media.id,
@@ -157,8 +178,9 @@ export async function GET(
       season: media.season ?? undefined,
       seasonYear: media.seasonYear ?? undefined,
       format: media.format ?? undefined,
-      franchiseStatus,
-      hasPrequel,
+      relations: {
+        edges: relationEdges,
+      },
     };
 
     return NextResponse.json(transformed, {

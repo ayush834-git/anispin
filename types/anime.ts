@@ -13,8 +13,20 @@ export type Anime = {
   season?: string;
   seasonYear?: number;
   format?: string;
-  franchiseStatus?: "ONGOING" | "RETURNING" | "CONCLUDED";
-  hasPrequel?: boolean;
+  relations?: {
+    edges: Array<{
+      relationType?: string;
+      node: {
+        id: number;
+        title: string;
+        poster: string;
+        episodes?: number;
+        status?: string;
+        seasonYear?: number;
+        format?: string;
+      };
+    }>;
+  };
 };
 
 export type Filters = {

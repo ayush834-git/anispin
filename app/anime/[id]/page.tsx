@@ -38,45 +38,15 @@ function getEpisodeDisplay(anime: Pick<Anime, "status" | "episodes">) {
 function getSeasonStatusLabel(status?: string) {
   if (status === "FINISHED") return "Season Finished";
   if (status === "RELEASING") return "Currently Airing";
-  if (status === "NOT_YET_RELEASED") return "Upcoming Season";
+  if (status === "NOT_YET_RELEASED") return "Upcoming";
   return "Season Status Unknown";
 }
 
-function getFranchiseIndicator(franchiseStatus?: Anime["franchiseStatus"]) {
-  if (franchiseStatus === "ONGOING") {
-    return {
-      label: "\uD83D\uDD01 Franchise Ongoing",
-      className: "border-[#00B8D8]/45 bg-[#00B8D8]/12 text-[#BDEFFF]",
-    };
-  }
-
-  if (franchiseStatus === "RETURNING") {
-    return {
-      label: "\uD83D\uDD52 New Season Announced",
-      className: "border-[#FFB648]/45 bg-[#FFB648]/14 text-[#FFE3B6]",
-    };
-  }
-
-  return {
-    label: "\u2714 Story Concluded",
-    className: "border-[#3BC97D]/45 bg-[#3BC97D]/14 text-[#C6F9DD]",
-  };
-}
-
-function getSeasonEntryLabel(anime: Anime) {
-  if (anime.hasPrequel) return "Season Entry";
-  if (anime.format === "TV") return "TV Series";
-  return anime.format ?? "Unknown Format";
-}
-
-function getRuntimeLabel(anime: Anime) {
-  if (!anime.episodes || !anime.duration) {
-    return "Total Runtime: Unknown";
-  }
-
-  const totalMinutes = anime.episodes * anime.duration;
-  const totalHours = (totalMinutes / 60).toFixed(1);
-  return `Total Runtime: ~${totalHours} Hours`;
+function getRelatedStatusLabel(status?: string) {
+  if (status === "RELEASING") return "Currently Airing";
+  if (status === "FINISHED") return "Season Finished";
+  if (status === "NOT_YET_RELEASED") return "Upcoming";
+  return "Status Unknown";
 }
 
 export default async function AnimeDetailPage({
@@ -117,9 +87,10 @@ export default async function AnimeDetailPage({
       : "Unknown";
   const episodeDisplay = getEpisodeDisplay(anime);
   const seasonStatusLabel = getSeasonStatusLabel(anime.status);
-  const franchiseBadge = getFranchiseIndicator(anime.franchiseStatus);
-  const seasonEntryLabel = getSeasonEntryLabel(anime);
-  const runtimeLabel = getRuntimeLabel(anime);
+  const relatedSeasons =
+    anime.relations?.edges?.filter(
+      (edge) => edge.node.format === "TV" && edge.node.id !== anime.id,
+    ) ?? [];
 
   return (
     <main className="min-h-screen bg-[#0B0F1A] text-white">
@@ -171,23 +142,53 @@ export default async function AnimeDetailPage({
                   {seasonStatusLabel}
                 </span>
               </div>
-              <div className="flex flex-wrap items-center gap-2 text-xs font-bold uppercase tracking-wide">
-                <span className={`rounded-full border px-3 py-1.5 ${franchiseBadge.className}`}>
-                  {franchiseBadge.label}
-                </span>
-              </div>
             </div>
 
             <div className="space-y-2 text-sm font-semibold text-white/90">
-              <p>{seasonEntryLabel}</p>
+              <p>{anime.format ?? "Unknown Format"}</p>
               <p>{seasonLabel}</p>
             </div>
 
             <div className="space-y-1 border-t border-white/10 pt-4">
               <p className="text-xs font-black uppercase tracking-[0.14em] text-white/70">This Season</p>
               <p className="text-base font-semibold text-white/92">{episodeDisplay}</p>
-              <p className="text-sm font-semibold text-white/76">{runtimeLabel}</p>
             </div>
+
+            {relatedSeasons.length ? (
+              <div className="space-y-3 border-t border-white/10 pt-4">
+                <p className="text-xs font-black uppercase tracking-[0.14em] text-white/70">
+                  Other Seasons & Related
+                </p>
+                <div className="flex flex-col gap-3 md:flex-row md:gap-4 md:overflow-x-auto md:pb-2">
+                  {relatedSeasons.map(({ node }) => (
+                    <Link
+                      key={node.id}
+                      href={`/anime/${node.id}`}
+                      className="group rounded-xl border border-white/12 bg-[#11162A]/70 p-2 transition hover:border-[#00F0FF]/55 md:w-[300px] md:flex-shrink-0"
+                    >
+                      <div className="flex gap-3">
+                        <Image
+                          src={node.poster}
+                          alt={node.title}
+                          width={88}
+                          height={124}
+                          className="h-[124px] w-[88px] rounded-lg object-cover"
+                          loading="lazy"
+                        />
+                        <div className="min-w-0 space-y-1.5 text-xs font-semibold text-white/80">
+                          <p className="line-clamp-2 text-sm font-black uppercase tracking-wide text-white/94">
+                            {node.title}
+                          </p>
+                          <p>{node.seasonYear ?? "Year Unknown"}</p>
+                          <p>{getRelatedStatusLabel(node.status)}</p>
+                          <p>{getEpisodeDisplay(node)}</p>
+                        </div>
+                      </div>
+                    </Link>
+                  ))}
+                </div>
+              </div>
+            ) : null}
 
             <div className="space-y-2">
               <span className="inline-flex rounded-full border border-[#FF5E00]/45 bg-[#FF5E00]/12 px-3 py-1.5 text-xs font-black uppercase tracking-wide text-[#FFD3B8]">
