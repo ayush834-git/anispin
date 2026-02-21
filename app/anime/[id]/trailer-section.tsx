@@ -24,10 +24,10 @@ export function TrailerSection({ anime }: TrailerSectionProps) {
   const thumbnailUrl = `https://img.youtube.com/vi/${trailerId}/hqdefault.jpg`;
 
   return (
-    <div className="mt-6">
-      <h3 className="mb-2 text-lg font-semibold text-white">Trailer</h3>
+    <div className="mt-10">
+      <h3 className="mb-4 text-xl font-semibold text-white">Trailer</h3>
       <div
-        className="group relative w-full max-w-[480px] cursor-pointer"
+        className="group relative aspect-video w-full max-w-[560px] cursor-pointer"
         onClick={() => window.open(trailerUrl, "_blank", "noopener,noreferrer")}
         role="button"
         tabIndex={0}
@@ -42,12 +42,14 @@ export function TrailerSection({ anime }: TrailerSectionProps) {
         <Image
           src={thumbnailUrl}
           alt="Trailer thumbnail"
-          width={480}
-          height={270}
-          className="w-full rounded-md object-cover"
+          fill
+          sizes="(max-width: 768px) 100vw, 560px"
+          className="h-full w-full rounded-xl object-cover"
         />
         <div className="absolute inset-0 flex items-center justify-center bg-black/50 opacity-0 transition-opacity group-hover:opacity-100">
-          <span className="text-3xl font-bold text-white">{"\u25B6"}</span>
+          <div className="flex h-14 w-14 items-center justify-center rounded-full bg-white text-2xl font-bold text-black">
+            {"\u25B6"}
+          </div>
         </div>
       </div>
     </div>

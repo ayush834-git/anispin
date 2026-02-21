@@ -48,13 +48,6 @@ function getSeasonStatusLabel(status?: string) {
   return "Season Status Unknown";
 }
 
-function getRelatedStatusLabel(status?: string) {
-  if (status === "RELEASING") return "Currently Airing";
-  if (status === "FINISHED") return "Season Finished";
-  if (status === "NOT_YET_RELEASED") return "Upcoming Season";
-  return "Status Unknown";
-}
-
 export default async function AnimeDetailPage({
   params,
 }: {
@@ -103,8 +96,7 @@ export default async function AnimeDetailPage({
     title: node.title,
     poster: node.poster,
     seasonYear: node.seasonYear,
-    statusLabel: getRelatedStatusLabel(node.status),
-    episodesLabel: getEpisodeDisplay(node),
+    episodes: node.episodes,
   }));
 
   return (
