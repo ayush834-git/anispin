@@ -5,10 +5,9 @@ import Link from "next/link";
 import { animate, stagger } from "animejs";
 import { gsap } from "gsap";
 import { ScrollTrigger } from "gsap/ScrollTrigger";
-import { Clapperboard, Flame, Star, Tv } from "lucide-react";
+import { Clapperboard, Flame, Tv } from "lucide-react";
 import {
   type CSSProperties,
-  type WheelEvent,
   useCallback,
   useEffect,
   useId,
@@ -33,25 +32,6 @@ const HERO_POSTER_LAYOUT = [
   { top: "44%", left: "53%", rotate: 4, z: 13 },
   { top: "62%", left: "14%", rotate: -5, z: 15 },
   { top: "64%", left: "44%", rotate: 3, z: 12 },
-] as const;
-
-const FEATURE_STRIP = [
-  {
-    title: "Genre Filters",
-    subtitle: "Tune the battlefield by vibe before you spin.",
-  },
-  {
-    title: "Completed Only",
-    subtitle: "No cliffhanger traps. Finished arcs only.",
-  },
-  {
-    title: "Streaming Filter",
-    subtitle: "If it is not available, it is not selected.",
-  },
-  {
-    title: "Episode Length",
-    subtitle: "Lock 12-ep sprints or long saga marathons.",
-  },
 ] as const;
 
 const LENGTH_OPTIONS: Array<{
@@ -215,12 +195,18 @@ function ChaosHeader() {
         >
           <div
             ref={logoRef}
-            className="anispin-logo-badge flex size-11 items-center justify-center rounded-full text-lg font-black text-white"
+            className="anispin-logo-lockup"
             aria-label="AniSpin logo"
           >
-            AS
+            <Image
+              src="/anispin-logo-full.svg"
+              alt="AniSpin logo"
+              width={228}
+              height={64}
+              className="h-12 w-auto"
+              priority
+            />
           </div>
-          <span className="anispin-display text-3xl text-white">AniSpin</span>
         </button>
 
         <nav className="hidden items-center gap-1 text-[15px] font-semibold md:flex">
@@ -1163,56 +1149,6 @@ function AnimeCollectionSection({
   );
 }
 
-function FeatureStripSection() {
-  const scrollerRef = useRef<HTMLDivElement | null>(null);
-
-  const onWheelHorizontal = (event: WheelEvent<HTMLDivElement>) => {
-    if (!scrollerRef.current) return;
-    if (Math.abs(event.deltaY) <= Math.abs(event.deltaX)) return;
-    event.preventDefault();
-    scrollerRef.current.scrollLeft += event.deltaY;
-  };
-
-  return (
-    <section className="overflow-hidden py-12 md:py-20">
-      <div className="mx-auto flex w-full max-w-[1600px] flex-col justify-center px-3 md:px-5">
-        <div className="mb-5 flex items-center gap-3">
-          <Star className="size-6 text-[#00F0FF]" />
-          <h2 className="anispin-display text-5xl text-white md:text-6xl">
-            Filter The Chaos
-          </h2>
-        </div>
-
-        <div
-          ref={scrollerRef}
-          className="anispin-horizontal-scroll overflow-x-auto overflow-y-hidden pb-3"
-          onWheel={onWheelHorizontal}
-        >
-          <div className="flex w-max gap-4 pr-8">
-            {FEATURE_STRIP.map((item, index) => (
-              <article
-                key={item.title}
-                className="anispin-feature-card flex h-[56vh] w-[80vw] max-w-[460px] shrink-0 flex-col justify-between rounded-2xl p-6 shadow-[0_20px_35px_rgba(0,0,0,0.6)] md:w-[58vw] lg:w-[32vw]"
-                style={{ rotate: `${index % 2 === 0 ? -3 : 3}deg` }}
-              >
-                <p className="text-xs font-black uppercase tracking-[0.2em] text-[#00F0FF]">
-                  Chaos Control {String(index + 1).padStart(2, "0")}
-                </p>
-                <h3 className="anispin-display text-5xl text-white md:text-6xl">
-                  {item.title}
-                </h3>
-                <p className="max-w-sm text-base font-semibold text-white/88">
-                  {item.subtitle}
-                </p>
-              </article>
-            ))}
-          </div>
-        </div>
-      </div>
-    </section>
-  );
-}
-
 function SectionHeader() {
   return (
     <section className="py-10">
@@ -1270,7 +1206,6 @@ export function AniSpinLandingPage() {
         isLoading={completedQuery.isLoading}
         error={completedQuery.error}
       />
-      <FeatureStripSection />
     </main>
   );
 }

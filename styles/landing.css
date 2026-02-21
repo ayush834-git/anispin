@@ -134,22 +134,18 @@ html.lenis body {
   background: var(--anispin-neon-orange);
 }
 
-.anispin-logo-badge {
-  background: radial-gradient(
-    circle at 26% 26%,
-    var(--anispin-neon-orange) 0%,
-    var(--anispin-hot-magenta) 100%
-  );
-  box-shadow:
-    0 0 0 1px rgba(255, 255, 255, 0.24),
-    0 0 20px rgba(255, 94, 0, 0.5);
-  transition: box-shadow 0.2s ease;
+.anispin-logo-lockup {
+  display: inline-flex;
+  align-items: center;
+  border-radius: 12px;
+  transition: filter 0.2s ease;
+  filter: drop-shadow(0 0 8px rgba(0, 240, 255, 0.2));
 }
 
-.anispin-logo-badge:hover {
-  box-shadow:
-    0 0 0 1px rgba(255, 255, 255, 0.28),
-    0 0 26px rgba(255, 94, 0, 0.7);
+.anispin-logo-lockup:hover {
+  filter:
+    drop-shadow(0 0 12px rgba(0, 240, 255, 0.32))
+    drop-shadow(0 0 10px rgba(255, 94, 0, 0.25));
 }
 
 .anispin-login-button {
