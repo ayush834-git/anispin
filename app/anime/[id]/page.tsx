@@ -90,8 +90,8 @@ export default async function AnimeDetailPage({
       (edge) => edge.node.format === "TV" && edge.node.id !== anime.id,
     )
       .sort((a, b) => {
-        const ay = a.node.startYear ?? Number.POSITIVE_INFINITY;
-        const by = b.node.startYear ?? Number.POSITIVE_INFINITY;
+        const ay = a.node.startDate?.year ?? Number.POSITIVE_INFINITY;
+        const by = b.node.startDate?.year ?? Number.POSITIVE_INFINITY;
         return ay - by;
       }) ?? [];
 
@@ -164,6 +164,42 @@ export default async function AnimeDetailPage({
                 Streaming availability varies by region.
               </p>
             </div>
+
+            {relatedTV.length ? (
+              <div className="space-y-3 border-t border-white/10 pt-4">
+                <p className="text-xs font-black uppercase tracking-[0.14em] text-white/70">
+                  More in This Series
+                </p>
+                <div className="flex flex-col gap-3 md:flex-row md:gap-4 md:overflow-x-auto md:pb-2">
+                  {relatedTV.map(({ node }) => (
+                    <Link
+                      key={node.id}
+                      href={`/anime/${node.id}`}
+                      className="group rounded-xl border border-white/12 bg-[#11162A]/70 p-2 transition hover:border-[#00F0FF]/55 md:w-[300px] md:flex-shrink-0"
+                    >
+                      <div className="flex gap-3">
+                        <Image
+                          src={node.poster}
+                          alt={node.title}
+                          width={88}
+                          height={124}
+                          className="h-[124px] w-[88px] rounded-lg object-cover"
+                          loading="lazy"
+                        />
+                        <div className="min-w-0 space-y-1.5 text-xs font-semibold text-white/80">
+                          <p className="line-clamp-2 text-sm font-black uppercase tracking-wide text-white/94">
+                            {node.title}
+                          </p>
+                          <p>{node.startDate?.year ?? "Year Unknown"}</p>
+                          <p>{getRelatedStatusLabel(node.status)}</p>
+                          <p>{getEpisodeDisplay(node)}</p>
+                        </div>
+                      </div>
+                    </Link>
+                  ))}
+                </div>
+              </div>
+            ) : null}
           </div>
         </div>
 
@@ -174,41 +210,6 @@ export default async function AnimeDetailPage({
           </article>
         </div>
 
-        {relatedTV.length ? (
-          <div className="mx-auto mt-8 w-full max-w-6xl border-t border-white/10 pt-8">
-            <p className="mb-4 text-xs font-black uppercase tracking-[0.14em] text-white/70">
-              More in This Series
-            </p>
-            <div className="flex flex-col gap-3 md:flex-row md:gap-4 md:overflow-x-auto md:pb-2">
-              {relatedTV.map(({ node }) => (
-                <Link
-                  key={node.id}
-                  href={`/anime/${node.id}`}
-                  className="group rounded-xl border border-white/12 bg-[#11162A]/70 p-2 transition hover:border-[#00F0FF]/55 md:w-[300px] md:flex-shrink-0"
-                >
-                  <div className="flex gap-3">
-                    <Image
-                      src={node.poster}
-                      alt={node.title}
-                      width={88}
-                      height={124}
-                      className="h-[124px] w-[88px] rounded-lg object-cover"
-                      loading="lazy"
-                    />
-                    <div className="min-w-0 space-y-1.5 text-xs font-semibold text-white/80">
-                      <p className="line-clamp-2 text-sm font-black uppercase tracking-wide text-white/94">
-                        {node.title}
-                      </p>
-                      <p>{node.startYear ?? "Year Unknown"}</p>
-                      <p>{getRelatedStatusLabel(node.status)}</p>
-                      <p>{getEpisodeDisplay(node)}</p>
-                    </div>
-                  </div>
-                </Link>
-              ))}
-            </div>
-          </div>
-        ) : null}
       </section>
     </main>
   );

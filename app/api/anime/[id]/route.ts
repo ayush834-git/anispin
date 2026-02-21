@@ -154,7 +154,9 @@ export async function GET(
             poster: relationPoster,
             episodes: node.episodes ?? undefined,
             status: node.status ?? undefined,
-            startYear: node.startDate?.year ?? undefined,
+            startDate: {
+              year: node.startDate?.year ?? undefined,
+            },
             format: node.format ?? undefined,
           },
         };

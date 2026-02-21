@@ -21,7 +21,9 @@ export type Anime = {
         poster: string;
         episodes?: number;
         status?: string;
-        startYear?: number;
+        startDate?: {
+          year?: number;
+        };
         format?: string;
       };
     }>;
