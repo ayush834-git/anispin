@@ -34,18 +34,14 @@ type AniListMedia = {
         title: {
           english: string | null;
           romaji: string | null;
-          native: string | null;
         } | null;
         coverImage: {
-          extraLarge: string | null;
           large: string | null;
         } | null;
         episodes: number | null;
         format: string | null;
         status: string | null;
-        startDate: {
-          year: number | null;
-        } | null;
+        seasonYear: number | null;
       } | null;
     } | null> | null;
   } | null;
@@ -58,6 +54,15 @@ type AniListResponse = {
 function cleanDescription(text: string) {
   return text.replace(/<[^>]*>?/gm, "");
 }
+
+const ALLOWED_RELATION_TYPES = new Set([
+  "PREQUEL",
+  "SEQUEL",
+  "SIDE_STORY",
+  "ALTERNATIVE_VERSION",
+  "ALTERNATIVE_SETTING",
+  "SPIN_OFF",
+]);
 
 const query = gql`
   query ($id: Int) {
@@ -90,18 +95,14 @@ const query = gql`
             title {
               english
               romaji
-              native
             }
             coverImage {
-              extraLarge
               large
             }
             episodes
             format
             status
-            startDate {
-              year
-            }
+            seasonYear
           }
         }
       }
@@ -134,10 +135,17 @@ export async function GET(
     }
 
     const relationEdges = (media.relations?.edges ?? [])
-      .filter((edge): edge is NonNullable<typeof edge> => Boolean(edge?.node?.id))
+      .filter(
+        (edge): edge is NonNullable<typeof edge> =>
+          Boolean(
+            edge?.node?.id &&
+            edge.relationType &&
+            ALLOWED_RELATION_TYPES.has(edge.relationType),
+          ),
+      )
       .map((edge) => {
         const node = edge.node!;
-        const relationPoster = node.coverImage?.extraLarge || node.coverImage?.large;
+        const relationPoster = node.coverImage?.large;
         if (!relationPoster) {
           return null;
         }
@@ -149,14 +157,11 @@ export async function GET(
             title:
               node.title?.english ||
               node.title?.romaji ||
-              node.title?.native ||
               "Unknown Title",
             poster: relationPoster,
             episodes: node.episodes ?? undefined,
             status: node.status ?? undefined,
-            startDate: {
-              year: node.startDate?.year ?? undefined,
-            },
+            seasonYear: node.seasonYear ?? undefined,
             format: node.format ?? undefined,
           },
         };

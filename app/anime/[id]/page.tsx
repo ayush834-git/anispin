@@ -87,13 +87,12 @@ export default async function AnimeDetailPage({
   const episodeDisplay = getEpisodeDisplay(anime);
   const seasonStatusLabel = getSeasonStatusLabel(anime.status);
   const isMainstreamHit = popularityTier === "Mainstream Hit";
-  const relatedTV =
-    anime.relations?.edges?.filter(
-      (edge) => edge.node.format === "TV" && edge.node.id !== anime.id,
-    )
+  const franchiseEntries =
+    anime.relations?.edges
+      ?.filter((edge) => edge.node.id !== anime.id)
       .sort((a, b) => {
-        const ay = a.node.startDate?.year ?? Number.POSITIVE_INFINITY;
-        const by = b.node.startDate?.year ?? Number.POSITIVE_INFINITY;
+        const ay = a.node.seasonYear ?? Number.POSITIVE_INFINITY;
+        const by = b.node.seasonYear ?? Number.POSITIVE_INFINITY;
         return ay - by;
       }) ?? [];
 
@@ -167,38 +166,40 @@ export default async function AnimeDetailPage({
               </p>
             </div>
 
-            {relatedTV.length ? (
+            {franchiseEntries.length ? (
               <div className="space-y-3 border-t border-white/10 pt-4">
                 <p className="text-xs font-black uppercase tracking-[0.14em] text-white/70">
-                  More in This Series
+                  Franchise Entries
                 </p>
-                <div className="flex flex-col gap-3 md:flex-row md:gap-4 md:overflow-x-auto md:pb-2">
-                  {relatedTV.map(({ node }) => (
-                    <Link
-                      key={node.id}
-                      href={`/anime/${node.id}`}
-                      className="group rounded-xl border border-white/12 bg-[#11162A]/70 p-2 transition hover:border-[#00F0FF]/55 md:w-[300px] md:flex-shrink-0"
-                    >
-                      <div className="flex gap-3">
-                        <Image
-                          src={node.poster}
-                          alt={node.title}
-                          width={88}
-                          height={124}
-                          className="h-[124px] w-[88px] rounded-lg object-cover"
-                          loading="lazy"
-                        />
-                        <div className="min-w-0 space-y-1.5 text-xs font-semibold text-white/80">
-                          <p className="line-clamp-2 text-sm font-black uppercase tracking-wide text-white/94">
-                            {node.title}
-                          </p>
-                          <p>{node.startDate?.year ?? "Year Unknown"}</p>
-                          <p>{getRelatedStatusLabel(node.status)}</p>
-                          <p>{getEpisodeDisplay(node)}</p>
+                <div className="w-full overflow-x-auto pb-2">
+                  <div className="flex min-w-max gap-6">
+                    {franchiseEntries.map(({ node }) => (
+                      <Link
+                        key={node.id}
+                        href={`/anime/${node.id}`}
+                        className="group w-[240px] flex-shrink-0 rounded-xl border border-white/12 bg-[#11162A]/70 p-2 transition hover:border-[#00F0FF]/55"
+                      >
+                        <div className="flex gap-3">
+                          <Image
+                            src={node.poster}
+                            alt={node.title}
+                            width={88}
+                            height={124}
+                            className="h-[124px] w-[88px] rounded-lg object-cover"
+                            loading="lazy"
+                          />
+                          <div className="min-w-0 space-y-1.5 text-xs font-semibold text-white/80">
+                            <p className="line-clamp-2 text-sm font-black uppercase tracking-wide text-white/94">
+                              {node.title}
+                            </p>
+                            <p>{node.seasonYear ?? "Year Unknown"}</p>
+                            <p>{getRelatedStatusLabel(node.status)}</p>
+                            <p>{getEpisodeDisplay(node)}</p>
+                          </div>
                         </div>
-                      </div>
-                    </Link>
-                  ))}
+                      </Link>
+                    ))}
+                  </div>
                 </div>
               </div>
             ) : null}
