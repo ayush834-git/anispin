@@ -8,7 +8,9 @@ const endpoint = "https://graphql.anilist.co";
 type AniListMedia = {
   id: number;
   title: {
+    english: string | null;
     romaji: string | null;
+    native: string | null;
   };
   coverImage: {
     extraLarge: string | null;
@@ -61,7 +63,9 @@ const query = gql`
       ) {
         id
         title {
+          english
           romaji
+          native
         }
         coverImage {
           extraLarge
@@ -137,7 +141,11 @@ export async function GET(req: Request) {
         return [
           {
             id: media.id,
-            title: media.title.romaji || "Unknown Title",
+            title:
+              media.title.english ||
+              media.title.romaji ||
+              media.title.native ||
+              "Unknown Title",
             description: "",
             poster,
             banner: media.bannerImage || null,

@@ -45,29 +45,30 @@ export function useSpinEngine(filters: Filters) {
     return list[list.length - 1];
   }, []);
 
-  const spin = useCallback((): SpinResult => {
+  const spin = useCallback((candidateList?: Anime[], spinDurationMs = 2200): SpinResult => {
+    const sourceList = candidateList && candidateList.length > 0 ? candidateList : filteredList;
     setIsSpinning(true);
 
-    if (filteredList.length === 0) {
+    if (sourceList.length === 0) {
       setSelectedAnime(null);
       if (spinTimerRef.current) clearTimeout(spinTimerRef.current);
-      spinTimerRef.current = setTimeout(() => setIsSpinning(false), 1800);
+      spinTimerRef.current = setTimeout(() => setIsSpinning(false), spinDurationMs);
       return null;
     }
 
-    const picked = weightedSelect(filteredList);
+    const picked = weightedSelect(sourceList);
     if (!picked) {
       setSelectedAnime(null);
       if (spinTimerRef.current) clearTimeout(spinTimerRef.current);
-      spinTimerRef.current = setTimeout(() => setIsSpinning(false), 1800);
+      spinTimerRef.current = setTimeout(() => setIsSpinning(false), spinDurationMs);
       return null;
     }
 
-    const pickedIndex = filteredList.findIndex((anime) => anime.id === picked.id);
+    const pickedIndex = sourceList.findIndex((anime) => anime.id === picked.id);
     setSelectedAnime(picked);
 
     if (spinTimerRef.current) clearTimeout(spinTimerRef.current);
-    spinTimerRef.current = setTimeout(() => setIsSpinning(false), 1800);
+    spinTimerRef.current = setTimeout(() => setIsSpinning(false), spinDurationMs);
 
     return {
       picked,
@@ -85,4 +86,3 @@ export function useSpinEngine(filters: Filters) {
     spin,
   }), [animeList, filteredList, selectedAnime, isLoading, error, isSpinning, spin]);
 }
-

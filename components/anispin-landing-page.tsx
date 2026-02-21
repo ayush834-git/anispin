@@ -6,7 +6,17 @@ import { animate, stagger } from "animejs";
 import { gsap } from "gsap";
 import { ScrollTrigger } from "gsap/ScrollTrigger";
 import { Clapperboard, Flame, Star, Tv } from "lucide-react";
-import { type WheelEvent, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
+import {
+  type CSSProperties,
+  type WheelEvent,
+  useCallback,
+  useEffect,
+  useId,
+  useLayoutEffect,
+  useMemo,
+  useRef,
+  useState,
+} from "react";
 
 import { GenreDropdown } from "@/components/GenreDropdown";
 import { Button } from "@/components/ui/button";
@@ -43,6 +53,63 @@ const FEATURE_STRIP = [
     subtitle: "Lock 12-ep sprints or long saga marathons.",
   },
 ] as const;
+
+const WHEEL_SIZE = 1000;
+const WHEEL_CENTER = WHEEL_SIZE / 2;
+const WHEEL_OUTER_RADIUS = 468;
+const WHEEL_INNER_RADIUS = 188;
+const WHEEL_FALLBACK_COLORS = ["#FF5E00", "#00F0FF", "#FF007A", "#7B2EFF", "#B4FF00"] as const;
+const SPIN_DURATION_MS = 2200;
+const PLACEHOLDER_SEGMENTS = Array.from({ length: 8 }, (_, index) => ({
+  id: -1 - index,
+  title: "Awaiting Data",
+  poster: "",
+  genres: [],
+  description: "",
+}));
+
+type WheelSlice = {
+  path: string;
+  labelX: number;
+  labelY: number;
+  labelAngle: number;
+  fallbackColor: string;
+};
+
+function polarToCartesian(cx: number, cy: number, radius: number, angleDeg: number) {
+  const radians = ((angleDeg - 90) * Math.PI) / 180;
+  return {
+    x: cx + radius * Math.cos(radians),
+    y: cy + radius * Math.sin(radians),
+  };
+}
+
+function describeSlicePath(
+  cx: number,
+  cy: number,
+  innerRadius: number,
+  outerRadius: number,
+  startAngle: number,
+  endAngle: number,
+) {
+  const outerStart = polarToCartesian(cx, cy, outerRadius, endAngle);
+  const outerEnd = polarToCartesian(cx, cy, outerRadius, startAngle);
+  const innerStart = polarToCartesian(cx, cy, innerRadius, startAngle);
+  const innerEnd = polarToCartesian(cx, cy, innerRadius, endAngle);
+  const largeArcFlag = endAngle - startAngle > 180 ? 1 : 0;
+
+  return [
+    `M ${outerStart.x} ${outerStart.y}`,
+    `A ${outerRadius} ${outerRadius} 0 ${largeArcFlag} 0 ${outerEnd.x} ${outerEnd.y}`,
+    `L ${innerStart.x} ${innerStart.y}`,
+    `A ${innerRadius} ${innerRadius} 0 ${largeArcFlag} 1 ${innerEnd.x} ${innerEnd.y}`,
+    "Z",
+  ].join(" ");
+}
+
+function truncateWheelTitle(title: string) {
+  return title.length > 16 ? `${title.slice(0, 16)}...` : title;
+}
 
 function formatStatus(status?: string | null) {
   if (!status) return "UNKNOWN";
@@ -326,6 +393,10 @@ function ChaosHeroSection({
 
 function SpinReactorSection() {
   const [filters, setFilters] = useState<Filters>({});
+  const [activeSliceIndex, setActiveSliceIndex] = useState<number | null>(null);
+  const [winnerPulse, setWinnerPulse] = useState(false);
+  const [highlightResult, setHighlightResult] = useState(false);
+  const wheelId = useId().replace(/:/g, "");
   const {
     filteredList,
     selectedAnime,
@@ -338,8 +409,100 @@ function SpinReactorSection() {
   const ringRef = useRef<HTMLDivElement | null>(null);
   const pulseRef = useRef<HTMLSpanElement | null>(null);
   const sweepRef = useRef<HTMLSpanElement | null>(null);
+  const innerRingRef = useRef<HTMLDivElement | null>(null);
+  const coreGlowRef = useRef<HTMLDivElement | null>(null);
   const spinButtonRef = useRef<HTMLDivElement | null>(null);
+  const resultRef = useRef<HTMLDivElement | null>(null);
   const wheelRotationRef = useRef(0);
+  const spinRafRef = useRef<number | null>(null);
+  const previousRotationRef = useRef(0);
+  const previousFrameTimeRef = useRef<number | null>(null);
+  const scrollTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const highlightTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const winnerPulseTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  const wheelAnime = useMemo(() => filteredList.slice(0, 10), [filteredList]);
+  const displaySegments = wheelAnime.length > 0 ? wheelAnime : PLACEHOLDER_SEGMENTS;
+
+  const wheelSlices = useMemo<WheelSlice[]>(() => {
+    const sliceCount = displaySegments.length;
+    const sliceAngle = 360 / sliceCount;
+
+    return displaySegments.map((_, index) => {
+      const startAngle = index * sliceAngle;
+      const endAngle = startAngle + sliceAngle;
+      const middleAngle = startAngle + sliceAngle / 2;
+      const labelPosition = polarToCartesian(
+        WHEEL_CENTER,
+        WHEEL_CENTER,
+        (WHEEL_OUTER_RADIUS + WHEEL_INNER_RADIUS) / 2,
+        middleAngle,
+      );
+
+      return {
+        path: describeSlicePath(
+          WHEEL_CENTER,
+          WHEEL_CENTER,
+          WHEEL_INNER_RADIUS,
+          WHEEL_OUTER_RADIUS,
+          startAngle,
+          endAngle,
+        ),
+        labelX: labelPosition.x,
+        labelY: labelPosition.y,
+        labelAngle: middleAngle,
+        fallbackColor: WHEEL_FALLBACK_COLORS[index % WHEEL_FALLBACK_COLORS.length],
+      };
+    });
+  }, [displaySegments]);
+
+  const stopSpinFrame = useCallback(() => {
+    if (spinRafRef.current !== null) {
+      window.cancelAnimationFrame(spinRafRef.current);
+      spinRafRef.current = null;
+    }
+
+    previousFrameTimeRef.current = null;
+
+    if (ringRef.current) {
+      ringRef.current.style.setProperty("--spin-blur", "0px");
+      ringRef.current.style.setProperty("--spin-glow-strength", "0.38");
+    }
+  }, []);
+
+  const startSpinFrame = useCallback(() => {
+    if (!ringRef.current) return;
+
+    stopSpinFrame();
+    previousRotationRef.current =
+      Number(gsap.getProperty(ringRef.current, "rotation")) || wheelRotationRef.current;
+
+    const updateFrame = (time: number) => {
+      if (!ringRef.current) {
+        stopSpinFrame();
+        return;
+      }
+
+      const previousTime = previousFrameTimeRef.current ?? time;
+      const elapsed = Math.max(16, time - previousTime);
+      const currentRotation = Number(gsap.getProperty(ringRef.current, "rotation")) || 0;
+      const rotationDelta = Math.abs(currentRotation - previousRotationRef.current);
+      const velocity = rotationDelta / (elapsed / 16.67);
+      const intensity = Math.min(1, velocity / 18);
+
+      ringRef.current.style.setProperty("--spin-blur", `${(intensity * 2.4).toFixed(2)}px`);
+      ringRef.current.style.setProperty(
+        "--spin-glow-strength",
+        `${(0.38 + intensity * 0.62).toFixed(2)}`,
+      );
+
+      previousRotationRef.current = currentRotation;
+      previousFrameTimeRef.current = time;
+      spinRafRef.current = window.requestAnimationFrame(updateFrame);
+    };
+
+    spinRafRef.current = window.requestAnimationFrame(updateFrame);
+  }, [stopSpinFrame]);
 
   useEffect(() => {
     const running: Array<{ pause: () => void }> = [];
@@ -347,9 +510,9 @@ function SpinReactorSection() {
     if (pulseRef.current) {
       running.push(
         animate(pulseRef.current, {
-          scale: [0.9, 1.26],
-          opacity: [0.5, 0],
-          duration: 1600,
+          scale: [0.88, 1.2],
+          opacity: [0.42, 0],
+          duration: 1900,
           ease: "out(4)",
           loop: true,
         }),
@@ -367,50 +530,153 @@ function SpinReactorSection() {
       );
     }
 
+    if (innerRingRef.current) {
+      running.push(
+        animate(innerRingRef.current, {
+          rotate: [0, 360],
+          duration: 19000,
+          ease: "linear",
+          loop: true,
+        }),
+      );
+    }
+
+    if (coreGlowRef.current) {
+      running.push(
+        animate(coreGlowRef.current, {
+          scale: [1, 1.04],
+          duration: 1200,
+          ease: "inOutSine",
+          alternate: true,
+          loop: true,
+        }),
+      );
+    }
+
     return () => {
       running.forEach((animation) => animation.pause());
     };
   }, []);
 
+  useEffect(() => {
+    return () => {
+      stopSpinFrame();
+
+      if (scrollTimerRef.current) clearTimeout(scrollTimerRef.current);
+      if (highlightTimerRef.current) clearTimeout(highlightTimerRef.current);
+      if (winnerPulseTimerRef.current) clearTimeout(winnerPulseTimerRef.current);
+    };
+  }, [stopSpinFrame]);
+
   const onSpinHoverStart = () => {
-    if (!spinButtonRef.current) return;
-    animate(spinButtonRef.current, {
-      scale: 1.07,
-      duration: 220,
-      ease: "out(4)",
-    });
+    if (spinButtonRef.current) {
+      animate(spinButtonRef.current, {
+        scale: 1.08,
+        duration: 210,
+        ease: "out(4)",
+      });
+    }
+
+    if (coreGlowRef.current) {
+      animate(coreGlowRef.current, {
+        scale: 1.08,
+        duration: 210,
+        ease: "out(3)",
+      });
+    }
   };
 
   const onSpinHoverEnd = () => {
-    if (!spinButtonRef.current) return;
-    animate(spinButtonRef.current, {
-      scale: 1,
-      duration: 200,
-      ease: "out(3)",
-    });
+    if (spinButtonRef.current) {
+      animate(spinButtonRef.current, {
+        scale: 1,
+        duration: 200,
+        ease: "out(3)",
+      });
+    }
+
+    if (coreGlowRef.current) {
+      animate(coreGlowRef.current, {
+        scale: 1,
+        duration: 200,
+        ease: "out(3)",
+      });
+    }
   };
 
   const onSpinClick = () => {
-    const result = spin();
-    if (!result || !ringRef.current) return;
+    if (!ringRef.current || wheelAnime.length === 0 || isSpinning || isLoading) return;
 
-    const sliceCount = 10;
+    const result = spin(wheelAnime, SPIN_DURATION_MS);
+    if (!result) return;
+
+    const sliceCount = wheelAnime.length;
     const sliceAngle = 360 / sliceCount;
     const targetSlice = result.pickedIndex % sliceCount;
     const targetSliceCenter = targetSlice * sliceAngle + sliceAngle / 2;
     const targetNormalized = (270 - targetSliceCenter + 360) % 360;
     const currentNormalized = ((wheelRotationRef.current % 360) + 360) % 360;
     const delta = (targetNormalized - currentNormalized + 360) % 360;
-    const nextRotation = wheelRotationRef.current + 360 * 5 + delta;
+    const nextRotation = wheelRotationRef.current + 360 * 6 + delta;
 
-    gsap.to(ringRef.current, {
-      rotation: nextRotation,
-      duration: 1.8,
-      ease: "power3.inOut",
+    setActiveSliceIndex(null);
+    setWinnerPulse(false);
+    setHighlightResult(false);
+    startSpinFrame();
+
+    gsap.timeline({
+      defaults: { overwrite: true },
       onComplete: () => {
         wheelRotationRef.current = nextRotation;
+        stopSpinFrame();
+        setActiveSliceIndex(targetSlice);
+        setWinnerPulse(true);
+
+        if (winnerPulseTimerRef.current) clearTimeout(winnerPulseTimerRef.current);
+        winnerPulseTimerRef.current = setTimeout(() => setWinnerPulse(false), 420);
+
+        if (resultRef.current && result.picked) {
+          if (scrollTimerRef.current) clearTimeout(scrollTimerRef.current);
+          scrollTimerRef.current = setTimeout(() => {
+            resultRef.current?.scrollIntoView({
+              behavior: "smooth",
+              block: "start",
+            });
+
+            setHighlightResult(true);
+            if (highlightTimerRef.current) clearTimeout(highlightTimerRef.current);
+            highlightTimerRef.current = setTimeout(() => setHighlightResult(false), 1500);
+          }, 150);
+        }
       },
-    });
+    })
+      .to(
+        ringRef.current,
+        {
+          scale: 1.05,
+          duration: 0.28,
+          ease: "power2.out",
+        },
+        0,
+      )
+      .to(
+        ringRef.current,
+        {
+          rotation: nextRotation,
+          duration: SPIN_DURATION_MS / 1000,
+          ease: "power4.out",
+        },
+        0,
+      )
+      .to(
+        ringRef.current,
+        {
+          scale: 1,
+          duration: 0.34,
+          ease: "power2.in",
+        },
+        SPIN_DURATION_MS / 1000 - 0.34,
+      );
   };
 
   const isEmpty = !isLoading && !error && filteredList.length === 0;
@@ -484,36 +750,126 @@ function SpinReactorSection() {
             {error ? <StatusBubble text="Unable to load anime. Try again later." /> : null}
             {isEmpty ? <StatusBubble text="No matches found. Try different filters." /> : null}
 
-            <div className="relative mt-2 h-[min(76vw,520px)] w-[min(76vw,520px)]">
+            <div className="anispin-wheel-scene relative mt-2 h-[min(76vw,520px)] w-[min(76vw,520px)]">
+              <div className="anispin-wheel-pointer" aria-hidden />
               <span
                 ref={pulseRef}
-                className="pointer-events-none absolute inset-[10%] rounded-full border border-[#00F0FF]/55"
+                className="anispin-wheel-aura pointer-events-none absolute inset-[8%] rounded-full"
                 aria-hidden
               />
               <span
                 ref={sweepRef}
-                className="anispin-reactor-sweep pointer-events-none absolute inset-[7%] rounded-full"
+                className="anispin-wheel-sweep pointer-events-none absolute inset-[4%] rounded-full"
                 aria-hidden
               />
+
               <div
                 ref={ringRef}
-                className="anispin-reactor-outer absolute inset-0 rounded-full"
-              />
-              <div className="anispin-reactor-dotted absolute inset-[16%] rounded-full" />
-              <div className="absolute inset-0 flex items-center justify-center">
-                <div
-                  ref={spinButtonRef}
-                  onMouseEnter={onSpinHoverStart}
-                  onMouseLeave={onSpinHoverEnd}
-                  className="will-change-transform"
+                className={`anispin-wheel-ring absolute inset-0 ${isSpinning ? "is-spinning" : ""}`}
+                style={
+                  {
+                    "--spin-blur": "0px",
+                    "--spin-glow-strength": "0.38",
+                  } as CSSProperties
+                }
+              >
+                <svg
+                  viewBox={`0 0 ${WHEEL_SIZE} ${WHEEL_SIZE}`}
+                  className="h-full w-full"
+                  aria-label="Anime spin wheel"
                 >
-                  <Button
-                    className="anispin-spin-button h-24 w-24 rounded-full text-xl font-black uppercase tracking-wider text-[#0B0F1A]"
-                    onClick={onSpinClick}
-                    disabled={isSpinning || isLoading || filteredList.length === 0}
+                  <defs>
+                    <filter id={`${wheelId}-slice-blur`}>
+                      <feGaussianBlur stdDeviation="3.2" />
+                    </filter>
+                    {wheelSlices.map((slice, index) => (
+                      <g key={`${wheelId}-defs-${index}`}>
+                        <clipPath id={`${wheelId}-clip-${index}`}>
+                          <path d={slice.path} />
+                        </clipPath>
+                        <linearGradient
+                          id={`${wheelId}-overlay-${index}`}
+                          x1="0%"
+                          y1="0%"
+                          x2="100%"
+                          y2="100%"
+                        >
+                          <stop offset="0%" stopColor="rgba(5, 7, 15, 0.36)" />
+                          <stop offset="58%" stopColor="rgba(5, 7, 15, 0.56)" />
+                          <stop offset="100%" stopColor="rgba(5, 7, 15, 0.74)" />
+                        </linearGradient>
+                      </g>
+                    ))}
+                  </defs>
+
+                  {displaySegments.map((anime, index) => {
+                    const slice = wheelSlices[index];
+                    if (!slice) return null;
+
+                    return (
+                      <g key={`wheel-slice-${anime.id}-${index}`}>
+                        <path d={slice.path} fill={slice.fallbackColor} opacity={0.9} />
+                        {anime.poster ? (
+                          <image
+                            href={anime.poster}
+                            x={0}
+                            y={0}
+                            width={WHEEL_SIZE}
+                            height={WHEEL_SIZE}
+                            preserveAspectRatio="xMidYMid slice"
+                            clipPath={`url(#${wheelId}-clip-${index})`}
+                            filter={`url(#${wheelId}-slice-blur)`}
+                            opacity={0.92}
+                          />
+                        ) : null}
+                        <path d={slice.path} fill={`url(#${wheelId}-overlay-${index})`} />
+                        <path d={slice.path} className="anispin-wheel-slice-border" />
+                        <text
+                          x={slice.labelX}
+                          y={slice.labelY}
+                          textAnchor="middle"
+                          dominantBaseline="middle"
+                          className="anispin-wheel-label"
+                          transform={`rotate(${slice.labelAngle + 90} ${slice.labelX} ${slice.labelY})`}
+                        >
+                          {truncateWheelTitle(anime.title)}
+                        </text>
+                        {activeSliceIndex === index ? (
+                          <path
+                            d={slice.path}
+                            className={`anispin-wheel-winner ${winnerPulse ? "is-pulsing" : ""}`}
+                          />
+                        ) : null}
+                      </g>
+                    );
+                  })}
+                </svg>
+
+                <div className="anispin-wheel-inner-shadow absolute inset-[9%] rounded-full" />
+                <div
+                  ref={innerRingRef}
+                  className="anispin-wheel-inner-ring absolute inset-[16%] rounded-full"
+                />
+                <div className="anispin-wheel-reflection pointer-events-none absolute inset-[11%] rounded-full" />
+              </div>
+
+              <div className="absolute inset-0 flex items-center justify-center">
+                <div ref={coreGlowRef} className="anispin-wheel-core-shell relative flex items-center justify-center">
+                  <span className="anispin-wheel-core-pulse absolute inset-0 rounded-full" aria-hidden />
+                  <div
+                    ref={spinButtonRef}
+                    onMouseEnter={onSpinHoverStart}
+                    onMouseLeave={onSpinHoverEnd}
+                    className="will-change-transform"
                   >
-                    {isSpinning ? "Spinning" : "Spin"}
-                  </Button>
+                    <Button
+                      className="anispin-spin-button h-24 w-24 rounded-full text-xl font-black uppercase tracking-wider text-[#0B0F1A]"
+                      onClick={onSpinClick}
+                      disabled={isSpinning || isLoading || wheelAnime.length === 0}
+                    >
+                      {isSpinning ? "Spinning" : "Spin"}
+                    </Button>
+                  </div>
                 </div>
               </div>
             </div>
@@ -522,47 +878,56 @@ function SpinReactorSection() {
               Let the wheel decide.
             </p>
 
-            {!isSpinning && selectedAnime ? (
-              <Link href={`/anime/${selectedAnime.id}`} className="block w-full max-w-2xl">
-                <article className="relative overflow-hidden rounded-2xl border border-white/10 bg-[#11162A]/92">
-                  {selectedAnime.banner ? (
-                    <Image
-                      src={selectedAnime.banner}
-                      alt="banner"
-                      fill
-                      className="object-cover opacity-35"
-                    />
-                  ) : (
-                    <div className="absolute inset-0 bg-gradient-to-br from-[#FF5E00]/35 via-[#0F1220] to-[#00F0FF]/28" />
-                  )}
-                  <div className="relative flex items-start gap-4 p-4">
-                    <Image
-                      src={selectedAnime.poster}
-                      alt={selectedAnime.title}
-                      width={300}
-                      height={420}
-                      loading="lazy"
-                      className="h-32 w-24 rounded-lg object-cover"
-                    />
-                    <div className="min-w-0">
-                      <p className="anispin-display text-3xl text-white">{selectedAnime.title}</p>
-                      <p className="mt-1 text-xs font-semibold uppercase tracking-wide text-white/80">
-                        {formatStatus(selectedAnime.status)} | {selectedAnime.episodes ?? "?"} EPS
-                      </p>
-                      <p className="mt-2 text-sm font-semibold text-white/88">
-                        Score: {selectedAnime.score ?? "N/A"} | Popularity: {selectedAnime.popularity ?? "N/A"}
-                      </p>
-                      <p className="mt-2 text-xs font-medium text-white/78">
-                        {selectedAnime.genres.join(", ")}
-                      </p>
-                      <p className="mt-3 text-xs font-black uppercase tracking-wide text-[#00F0FF]">
-                        View Details
-                      </p>
+            <div ref={resultRef} className="w-full max-w-2xl scroll-mt-28">
+              {!isSpinning && selectedAnime ? (
+                <Link href={`/anime/${selectedAnime.id}`} className="block">
+                  <article
+                    className={`anispin-result-card relative overflow-hidden rounded-2xl border border-white/10 bg-[#11162A]/92 ${
+                      highlightResult ? "anispin-result-highlight" : ""
+                    }`}
+                  >
+                    {selectedAnime.banner ? (
+                      <Image
+                        src={selectedAnime.banner}
+                        alt="banner"
+                        fill
+                        className="object-cover opacity-35"
+                      />
+                    ) : (
+                      <div className="absolute inset-0 bg-gradient-to-br from-[#FF5E00]/35 via-[#0F1220] to-[#00F0FF]/28" />
+                    )}
+                    <div className="relative flex items-start gap-4 p-4">
+                      <Image
+                        src={selectedAnime.poster}
+                        alt={selectedAnime.title}
+                        width={300}
+                        height={420}
+                        loading="lazy"
+                        className="h-32 w-24 rounded-lg object-cover"
+                      />
+                      <div className="min-w-0">
+                        <p className="anispin-display text-3xl text-white">{selectedAnime.title}</p>
+                        <p className="mt-1 text-xs font-semibold uppercase tracking-wide text-white/80">
+                          {formatStatus(selectedAnime.status)} | {selectedAnime.episodes ?? "?"} EPS
+                        </p>
+                        <p className="mt-2 text-sm font-semibold text-white/88">
+                          Score: {selectedAnime.score ?? "N/A"} | Popularity: {selectedAnime.popularity ?? "N/A"}
+                        </p>
+                        <p className="mt-2 text-xs font-medium text-white/78">
+                          {selectedAnime.genres.join(", ")}
+                        </p>
+                        <p className="mt-2 text-xs font-semibold text-white/72">
+                          Chosen based on your active filters.
+                        </p>
+                        <p className="mt-3 text-xs font-black uppercase tracking-wide text-[#00F0FF]">
+                          View Details
+                        </p>
+                      </div>
                     </div>
-                  </div>
-                </article>
-              </Link>
-            ) : null}
+                  </article>
+                </Link>
+              ) : null}
+            </div>
           </div>
         </div>
       </div>

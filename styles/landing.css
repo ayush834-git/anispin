@@ -206,54 +206,214 @@ html.lenis body {
     0 0 46px rgba(255, 94, 0, 0.28);
 }
 
-.anispin-reactor-outer {
+.anispin-wheel-scene {
+  perspective: 1200px;
+}
+
+.anispin-wheel-pointer {
+  position: absolute;
+  left: 50%;
+  top: -10px;
+  z-index: 20;
+  width: 0;
+  height: 0;
+  transform: translateX(-50%);
+  border-left: 14px solid transparent;
+  border-right: 14px solid transparent;
+  border-top: 0;
+  border-bottom: 26px solid #f4f7ff;
+  filter:
+    drop-shadow(0 0 10px rgba(255, 94, 0, 0.8))
+    drop-shadow(0 0 14px rgba(0, 240, 255, 0.55));
+}
+
+.anispin-wheel-pointer::after {
+  content: "";
+  position: absolute;
+  left: -4px;
+  top: 18px;
+  width: 8px;
+  height: 8px;
   border-radius: 999px;
-  background:
-    conic-gradient(
-      from 0deg,
-      var(--anispin-neon-orange) 0deg 36deg,
-      var(--anispin-electric-cyan) 36deg 72deg,
-      var(--anispin-hot-magenta) 72deg 108deg,
-      var(--anispin-acid-purple) 108deg 144deg,
-      var(--anispin-lime-shock) 144deg 180deg,
-      var(--anispin-neon-orange) 180deg 216deg,
-      var(--anispin-electric-cyan) 216deg 252deg,
-      var(--anispin-hot-magenta) 252deg 288deg,
-      var(--anispin-acid-purple) 288deg 324deg,
-      var(--anispin-lime-shock) 324deg 360deg
-    );
-  mask:
-    radial-gradient(circle, transparent 0 58%, black 58.5%),
-    linear-gradient(black, black);
+  background: #ffffff;
   box-shadow:
-    0 0 42px rgba(0, 240, 255, 0.4),
-    0 0 66px rgba(255, 94, 0, 0.3);
+    0 0 12px rgba(255, 94, 0, 0.7),
+    0 0 14px rgba(0, 240, 255, 0.56);
 }
 
-.anispin-reactor-dotted {
-  border: 3px dotted rgba(255, 255, 255, 0.44);
+.anispin-wheel-aura {
+  border: 1px solid rgba(0, 240, 255, 0.45);
   box-shadow:
-    inset 0 0 20px rgba(0, 240, 255, 0.2),
-    0 0 24px rgba(0, 240, 255, 0.2);
+    0 0 40px rgba(0, 240, 255, 0.28),
+    0 0 48px rgba(255, 94, 0, 0.22);
 }
 
-.anispin-reactor-sweep {
+.anispin-wheel-sweep {
   background: conic-gradient(
     from 0deg,
     transparent 0deg,
-    rgba(0, 240, 255, 0.42) 26deg,
-    rgba(255, 94, 0, 0.24) 44deg,
-    transparent 62deg
+    rgba(255, 94, 0, 0.3) 24deg,
+    rgba(0, 240, 255, 0.44) 42deg,
+    transparent 64deg
   );
-  mask: radial-gradient(circle, transparent 0 62%, black 63%);
+  mask: radial-gradient(circle, transparent 0 59%, black 60%);
+}
+
+.anispin-wheel-ring {
+  position: relative;
+  border-radius: 999px;
+  transform: rotateX(10deg);
+  transform-style: preserve-3d;
+  will-change: transform, filter;
+  filter: blur(var(--spin-blur, 0px));
+}
+
+.anispin-wheel-ring::before {
+  content: "";
+  position: absolute;
+  inset: -2%;
+  z-index: 2;
+  border-radius: 999px;
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  box-shadow:
+    0 0 44px rgba(0, 240, 255, calc(var(--spin-glow-strength, 0.38) * 0.75)),
+    0 0 58px rgba(255, 94, 0, calc(var(--spin-glow-strength, 0.38) * 0.65));
+  pointer-events: none;
+}
+
+.anispin-wheel-ring.is-spinning::before {
+  box-shadow:
+    0 0 56px rgba(0, 240, 255, calc(var(--spin-glow-strength, 0.38) * 0.95)),
+    0 0 76px rgba(255, 94, 0, calc(var(--spin-glow-strength, 0.38) * 0.85));
+}
+
+.anispin-wheel-slice-border {
+  fill: none;
+  stroke: rgba(255, 255, 255, 0.16);
+  stroke-width: 2;
+}
+
+.anispin-wheel-label {
+  fill: #ffffff;
+  font-family: "Manrope Variable", "Manrope", sans-serif;
+  font-size: 28px;
+  font-weight: 800;
+  letter-spacing: 0.015em;
+  paint-order: stroke;
+  stroke: rgba(3, 6, 14, 0.92);
+  stroke-width: 4px;
+}
+
+.anispin-wheel-winner {
+  fill: rgba(255, 255, 255, 0.08);
+  stroke: #ffffff;
+  stroke-width: 5;
+  filter:
+    drop-shadow(0 0 8px rgba(255, 255, 255, 0.65))
+    drop-shadow(0 0 16px rgba(0, 240, 255, 0.5));
+}
+
+.anispin-wheel-winner.is-pulsing {
+  animation: anispin-wheel-winner-pulse 420ms ease-out;
+}
+
+@keyframes anispin-wheel-winner-pulse {
+  0% {
+    opacity: 0.45;
+    stroke-width: 8;
+  }
+  100% {
+    opacity: 1;
+    stroke-width: 5;
+  }
+}
+
+.anispin-wheel-inner-shadow {
+  box-shadow:
+    inset 0 36px 54px rgba(255, 255, 255, 0.1),
+    inset 0 -34px 62px rgba(0, 0, 0, 0.58);
+}
+
+.anispin-wheel-inner-ring {
+  border: 2px dashed rgba(255, 255, 255, 0.36);
+  box-shadow:
+    inset 0 0 24px rgba(0, 240, 255, 0.16),
+    0 0 26px rgba(0, 240, 255, 0.16);
+}
+
+.anispin-wheel-reflection {
+  background: linear-gradient(
+    160deg,
+    rgba(255, 255, 255, 0.18) 0%,
+    rgba(255, 255, 255, 0.04) 34%,
+    rgba(255, 255, 255, 0) 58%
+  );
+  mix-blend-mode: screen;
+}
+
+.anispin-wheel-core-shell {
+  width: 148px;
+  height: 148px;
+  border-radius: 999px;
+  background: radial-gradient(circle at 30% 30%, rgba(0, 240, 255, 0.28) 0%, rgba(15, 18, 32, 0.7) 65%);
+  box-shadow:
+    inset 0 0 0 1px rgba(255, 255, 255, 0.24),
+    0 0 28px rgba(0, 240, 255, 0.44),
+    0 0 32px rgba(255, 94, 0, 0.24);
+}
+
+.anispin-wheel-core-pulse {
+  box-shadow:
+    inset 0 0 0 1px rgba(0, 240, 255, 0.28),
+    0 0 26px rgba(0, 240, 255, 0.42),
+    0 0 20px rgba(255, 94, 0, 0.26);
 }
 
 .anispin-spin-button {
   cursor: pointer;
-  background: var(--anispin-electric-cyan);
+  background: radial-gradient(circle at 35% 35%, #a5f9ff 0%, #00f0ff 55%, #11a8d0 100%);
   box-shadow:
-    0 0 0 1px rgba(255, 255, 255, 0.3),
-    0 0 35px rgba(0, 240, 255, 0.6);
+    0 0 0 1px rgba(255, 255, 255, 0.42),
+    0 0 32px rgba(0, 240, 255, 0.65),
+    0 0 18px rgba(255, 94, 0, 0.38);
+}
+
+.anispin-result-card {
+  transition:
+    border-color 0.25s ease,
+    box-shadow 0.25s ease,
+    transform 0.25s ease;
+}
+
+.anispin-result-highlight {
+  border-color: rgba(0, 240, 255, 0.62);
+  box-shadow:
+    0 0 0 1px rgba(0, 240, 255, 0.4),
+    0 0 40px rgba(0, 240, 255, 0.28),
+    0 0 26px rgba(255, 94, 0, 0.24);
+}
+
+@media (max-width: 768px) {
+  .anispin-wheel-pointer {
+    top: -6px;
+    border-left-width: 11px;
+    border-right-width: 11px;
+    border-bottom-width: 21px;
+  }
+
+  .anispin-wheel-ring {
+    transform: rotateX(8deg);
+  }
+
+  .anispin-wheel-label {
+    font-size: 20px;
+    stroke-width: 3.2px;
+  }
+
+  .anispin-wheel-core-shell {
+    width: 132px;
+    height: 132px;
+  }
 }
 
 .anispin-grid-card {
