@@ -5,7 +5,7 @@ import Link from "next/link";
 import { animate, stagger } from "animejs";
 import { gsap } from "gsap";
 import { ScrollTrigger } from "gsap/ScrollTrigger";
-import { Flame } from "lucide-react";
+import { Flame, Menu, X } from "lucide-react";
 import {
   type CSSProperties,
   useCallback,
@@ -175,6 +175,7 @@ function AnimeGridSkeleton({ count = 10 }: { count?: number }) {
 function ChaosHeader() {
   const logoRef = useRef<HTMLDivElement | null>(null);
   const [isScrolled, setIsScrolled] = useState(false);
+  const [menuOpen, setMenuOpen] = useState(false);
 
   useEffect(() => {
     const onScroll = () => {
@@ -188,6 +189,19 @@ function ChaosHeader() {
     };
   }, []);
 
+  useEffect(() => {
+    const onResize = () => {
+      if (window.innerWidth >= 768) {
+        setMenuOpen(false);
+      }
+    };
+
+    window.addEventListener("resize", onResize);
+    return () => {
+      window.removeEventListener("resize", onResize);
+    };
+  }, []);
+
   const onLogoHover = () => {
     if (!logoRef.current) return;
     animate(logoRef.current, {
@@ -198,15 +212,21 @@ function ChaosHeader() {
   };
 
   const links = [
-    { id: "home", label: "Home" },
-    { id: "spin-reactor", label: "Spin" },
-    { id: "trending", label: "Trending" },
-    { id: "top-airing", label: "Top Airing" },
-    { id: "completed", label: "Completed" },
+    { id: "home", label: "Home", href: "#home" },
+    { id: "spin-reactor", label: "Spin", href: "#spin-reactor" },
+    { id: "trending", label: "Trending", href: "#trending" },
+    { id: "top-airing", label: "Top Airing", href: "#top-airing" },
+    { id: "completed", label: "Completed", href: "#completed" },
   ] as const;
 
+  const onNavItemClick = () => {
+    setMenuOpen(false);
+  };
+
   return (
-    <header className={`anispin-header sticky top-0 z-50 h-[72px] ${isScrolled ? "is-scrolled" : ""}`}>
+    <header
+      className={`anispin-header sticky top-0 z-50 h-[72px] relative ${isScrolled ? "is-scrolled" : ""}`}
+    >
       <div className="mx-auto flex h-full w-full max-w-[1600px] items-center justify-between gap-3 px-3 md:px-5">
         <button
           type="button"
@@ -229,25 +249,69 @@ function ChaosHeader() {
           </div>
         </button>
 
-        <nav className="hidden items-center gap-1 text-[15px] font-semibold md:flex">
+        <div className="flex items-center">
+          <nav className="hidden items-center gap-1 text-[15px] font-semibold md:flex">
+            {links.map((item, index) => (
+              <a
+                key={item.id}
+                href={item.href}
+                aria-current={index === 0 ? "page" : undefined}
+                className={`anispin-nav-link rounded-md px-2.5 py-1.5 transition-colors hover:bg-white/10 ${index === 0 ? "anispin-nav-link-active" : ""}`}
+              >
+                {item.label}
+              </a>
+            ))}
+            <Link
+              href="/browse"
+              className="anispin-nav-link rounded-md px-2.5 py-1.5 transition-colors hover:bg-white/10"
+            >
+              Browse
+            </Link>
+          </nav>
+          <button
+            type="button"
+            className="ml-3 inline-flex h-9 w-9 items-center justify-center rounded-md border border-white/15 bg-[#11162A] text-white/90 transition-colors hover:bg-white/10 md:hidden"
+            onClick={() => setMenuOpen((previous) => !previous)}
+            aria-expanded={menuOpen}
+            aria-controls="anispin-mobile-nav"
+            aria-label={menuOpen ? "Close navigation menu" : "Open navigation menu"}
+          >
+            {menuOpen ? <X className="size-5" /> : <Menu className="size-5" />}
+          </button>
+        </div>
+
+      </div>
+
+      <div
+        id="anispin-mobile-nav"
+        className={`absolute left-0 top-full z-50 w-full border-t border-white/10 bg-[#0E1322]/95 backdrop-blur-sm transition-all duration-200 md:hidden ${
+          menuOpen
+            ? "pointer-events-auto translate-y-0 opacity-100"
+            : "pointer-events-none -translate-y-2 opacity-0"
+        }`}
+      >
+        <nav className="mx-auto flex w-full max-w-[1600px] flex-col gap-3 px-4 py-4 text-sm font-semibold">
           {links.map((item, index) => (
             <a
-              key={item.id}
-              href={`#${item.id}`}
+              key={`mobile-${item.id}`}
+              href={item.href}
+              onClick={onNavItemClick}
               aria-current={index === 0 ? "page" : undefined}
-              className={`anispin-nav-link rounded-md px-2.5 py-1.5 transition-colors hover:bg-white/10 ${index === 0 ? "anispin-nav-link-active" : ""}`}
+              className={`anispin-nav-link rounded-md px-2.5 py-2 transition-colors hover:bg-white/10 ${
+                index === 0 ? "anispin-nav-link-active" : ""
+              }`}
             >
               {item.label}
             </a>
           ))}
           <Link
             href="/browse"
-            className="anispin-nav-link rounded-md px-2.5 py-1.5 transition-colors hover:bg-white/10"
+            onClick={onNavItemClick}
+            className="anispin-nav-link rounded-md px-2.5 py-2 transition-colors hover:bg-white/10"
           >
             Browse
           </Link>
         </nav>
-
       </div>
     </header>
   );
