@@ -1,5 +1,8 @@
+"use client";
+
 import Image from "next/image";
 import Link from "next/link";
+import { type WheelEvent, useRef } from "react";
 
 type FranchiseEntry = {
   id: number;
@@ -14,13 +17,52 @@ type FranchiseEntriesStripProps = {
 };
 
 export function FranchiseEntriesStrip({ entries }: FranchiseEntriesStripProps) {
+  const scrollerRef = useRef<HTMLDivElement | null>(null);
+
+  function onWheelHorizontal(event: WheelEvent<HTMLDivElement>) {
+    if (!scrollerRef.current) return;
+    if (Math.abs(event.deltaY) <= Math.abs(event.deltaX)) return;
+    event.preventDefault();
+    scrollerRef.current.scrollLeft += event.deltaY;
+  }
+
+  function scrollByCards(direction: "left" | "right") {
+    if (!scrollerRef.current) return;
+    const delta = direction === "left" ? -260 : 260;
+    scrollerRef.current.scrollBy({ left: delta, behavior: "smooth" });
+  }
+
   if (!entries.length) return null;
 
   return (
     <div className="mt-10">
-      <h3 className="mb-4 text-xl font-semibold text-white">Franchise Entries</h3>
+      <div className="mb-4 flex items-center justify-between gap-3">
+        <h3 className="text-xl font-semibold text-white">Franchise Entries</h3>
+        <div className="hidden items-center gap-2 md:flex">
+          <button
+            type="button"
+            onClick={() => scrollByCards("left")}
+            aria-label="Scroll franchise entries left"
+            className="rounded-full border border-white/20 bg-[#11162A] px-2.5 py-1 text-sm font-black text-white/90 transition hover:border-[#00F0FF]/60"
+          >
+            {"\u2039"}
+          </button>
+          <button
+            type="button"
+            onClick={() => scrollByCards("right")}
+            aria-label="Scroll franchise entries right"
+            className="rounded-full border border-white/20 bg-[#11162A] px-2.5 py-1 text-sm font-black text-white/90 transition hover:border-[#00F0FF]/60"
+          >
+            {"\u203A"}
+          </button>
+        </div>
+      </div>
 
-      <div className="scrollbar-hide touch-pan-x w-full overflow-x-auto overflow-y-hidden pb-3">
+      <div
+        ref={scrollerRef}
+        onWheel={onWheelHorizontal}
+        className="scrollbar-hide touch-pan-x w-full overflow-x-auto overflow-y-hidden pb-3"
+      >
         <div className="flex min-w-max gap-4 pb-2">
           {entries.map((item) => (
             <Link
