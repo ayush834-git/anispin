@@ -62,8 +62,8 @@ function getLengthRange(length?: Filters["length"]) {
 
   if (length === "SHORT") return { min: 1, max: 12 };
   if (length === "MEDIUM") return { min: 13, max: 26 };
-  if (length === "LONG") return { min: 27, max: 75 };
-  if (length === "VERY_LONG") return { min: 76, max: Number.POSITIVE_INFINITY };
+  if (length === "LONG") return { min: 27, max: 100 };
+  if (length === "VERY_LONG") return { min: 101, max: Number.POSITIVE_INFINITY };
 
   return null;
 }
@@ -179,9 +179,10 @@ export function useSpinEngine(filters: Filters) {
           return { key: queryFilterKey, list: dedupeById([...previous.list, ...list]) };
         });
       })
-      .catch(() => {})
+      .catch((err) => {
+        console.error("useSpinEngine: fetchAnime extra page failed", err);
+      })
       .finally(() => {
-        if (cancelled) return;
         isFetchingExtraRef.current = false;
       });
 

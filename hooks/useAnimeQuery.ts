@@ -3,7 +3,39 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { buildAnimeFilters, fetchAnime } from "@/lib/anilist";
 import { type Anime, type Filters } from "@/types/anime";
 
-const animeQueryCache = new Map<string, Anime[]>();
+type CacheEntry = { value: Anime[]; ts: number };
+
+const MAX_CACHE_SIZE = 200;
+const CACHE_TTL_MS = 1000 * 60 * 5;
+
+const animeQueryCache = new Map<string, CacheEntry>();
+
+function setCacheEntry(key: string, list: Anime[]) {
+  if (animeQueryCache.has(key)) {
+    animeQueryCache.delete(key);
+  }
+  animeQueryCache.set(key, { value: list, ts: Date.now() });
+
+  while (animeQueryCache.size > MAX_CACHE_SIZE) {
+    const oldestKey = animeQueryCache.keys().next().value;
+    if (!oldestKey) break;
+    animeQueryCache.delete(oldestKey);
+  }
+}
+
+function getCacheEntry(key: string, ttlMs = CACHE_TTL_MS): Anime[] | undefined {
+  const entry = animeQueryCache.get(key);
+  if (!entry) return undefined;
+
+  if (Date.now() - entry.ts > ttlMs) {
+    animeQueryCache.delete(key);
+    return undefined;
+  }
+
+  animeQueryCache.delete(key);
+  animeQueryCache.set(key, entry);
+  return entry.value;
+}
 
 function getFilterCacheKey(filters: Record<string, string | number | boolean>) {
   const entries = Object.entries(filters).sort(([a], [b]) => a.localeCompare(b));
@@ -29,7 +61,7 @@ export function useAnimeQuery(filters: Filters, debounceMs = 0) {
 
   useEffect(() => {
     let cancelled = false;
-    const cached = animeQueryCache.get(cacheKey);
+    const cached = getCacheEntry(cacheKey);
     if (cached) {
       setAnimeList(cached);
       setError(null);
@@ -46,7 +78,7 @@ export function useAnimeQuery(filters: Filters, debounceMs = 0) {
       try {
         const list = await fetchAnime(normalizedFilters);
         if (cancelled || !mountedRef.current) return;
-        animeQueryCache.set(cacheKey, list);
+        setCacheEntry(cacheKey, list);
         setAnimeList(list);
       } catch {
         if (cancelled || !mountedRef.current) return;

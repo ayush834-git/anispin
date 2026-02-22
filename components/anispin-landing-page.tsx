@@ -41,9 +41,8 @@ const LENGTH_OPTIONS: Array<{
 }> = [
   { value: "SHORT", label: "Short", range: "1-12 eps" },
   { value: "MEDIUM", label: "Medium", range: "13-26 eps" },
-  { value: "LONG", label: "Long", range: "27-75 eps" },
-  { value: "VERY_LONG", label: "Very Long", range: "76+ eps" },
-  { value: "ONGOING", label: "Ongoing", range: "Releasing" },
+  { value: "LONG", label: "Long", range: "27-100 eps" },
+  { value: "VERY_LONG", label: "Saga", range: "101+ eps" },
 ];
 
 const WHEEL_SIZE = 1000;
