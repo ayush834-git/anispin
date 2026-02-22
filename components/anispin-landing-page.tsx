@@ -130,6 +130,19 @@ function getCommitmentLabel(episodes?: number | null, status?: string) {
   return "Saga";
 }
 
+function getSpinScoreLabel(score?: number | null) {
+  if (typeof score !== "number") return "⭐ Not rated";
+  return `⭐ ${(score / 10).toFixed(1)} / 10`;
+}
+
+function getSpinPopularityTier(popularity?: number | null) {
+  const value = typeof popularity === "number" ? popularity : Number.POSITIVE_INFINITY;
+  if (value <= 1000) return "🔥 Mainstream Hit";
+  if (value <= 5000) return "⭐ Popular";
+  if (value <= 15000) return "💎 Cult Favorite";
+  return "🌱 Hidden Gem";
+}
+
 function StatusBubble({ text }: { text: string }) {
   return (
     <div className="rounded-full border border-[#00F0FF]/45 bg-[#11162A]/90 px-4 py-2 text-xs font-bold text-white/90">
@@ -946,10 +959,10 @@ function SpinReactorSection() {
                       <div className="min-w-0">
                         <p className="anispin-display text-3xl text-white">{selectedAnime.title}</p>
                         <p className="mt-1 text-xs font-semibold uppercase tracking-wide text-white/80">
-                          {formatStatus(selectedAnime.status)} | {getEpisodeDisplay(selectedAnime)}
+                          📺 {getEpisodeDisplay(selectedAnime)}
                         </p>
                         <p className="mt-2 text-sm font-semibold text-white/88">
-                          Score: {selectedAnime.score ?? "Unknown"} | Popularity: {selectedAnime.popularity ?? "Unknown"}
+                          {getSpinScoreLabel(selectedAnime.score)} | {getSpinPopularityTier(selectedAnime.popularity)}
                         </p>
                         <p className="mt-1 text-xs font-semibold uppercase tracking-wide text-white/66">
                           Commitment: {getCommitmentLabel(selectedAnime.episodes, selectedAnime.status)}
