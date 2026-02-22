@@ -240,6 +240,12 @@ function ChaosHeader() {
               {item.label}
             </a>
           ))}
+          <Link
+            href="/browse"
+            className="anispin-nav-link rounded-md px-2.5 py-1.5 transition-colors hover:bg-white/10"
+          >
+            Browse
+          </Link>
         </nav>
 
         <Button className="anispin-login-button h-10 rounded-full px-6 text-sm font-bold text-white">
