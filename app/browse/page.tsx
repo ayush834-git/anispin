@@ -25,7 +25,7 @@ const CARDS_PER_CATEGORY = 18;
 const CATEGORY_CONFIGS: CategoryConfig[] = [
   {
     key: "beginner-friendly",
-    title: "🔥 Beginner Friendly",
+    title: "\u{1F525} Beginner Friendly",
     query: {},
     localFilter: (anime) => {
       const episodes = anime.episodes ?? Number.POSITIVE_INFINITY;
@@ -35,28 +35,38 @@ const CATEGORY_CONFIGS: CategoryConfig[] = [
   },
   {
     key: "action",
-    title: "⚔️ Action",
+    title: "\u2694\uFE0F Action",
     query: { genre: "Action" },
   },
   {
     key: "romance",
-    title: "💖 Romance",
+    title: "\u{1F496} Romance",
     query: { genre: "Romance" },
   },
   {
     key: "slice-of-life",
-    title: "🌿 Slice of Life",
+    title: "\u{1F33F} Slice of Life",
     query: { genre: "Slice of Life" },
   },
   {
     key: "psychological",
-    title: "🧠 Psychological",
+    title: "\u{1F9E0} Psychological",
     query: { genre: "Psychological" },
   },
   {
     key: "fantasy",
-    title: "✨ Fantasy",
+    title: "\u2728 Fantasy",
     query: { genre: "Fantasy" },
+  },
+  {
+    key: "comedy",
+    title: "\u{1F602} Comedy",
+    query: { genre: "Comedy" },
+  },
+  {
+    key: "isekai",
+    title: "\u{1F6AA} Isekai",
+    query: { genre: "Isekai" },
   },
 ];
 
