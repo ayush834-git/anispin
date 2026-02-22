@@ -63,11 +63,6 @@ const CATEGORY_CONFIGS: CategoryConfig[] = [
     title: "\u{1F602} Comedy",
     query: { genre: "Comedy" },
   },
-  {
-    key: "isekai",
-    title: "\u{1F6AA} Isekai",
-    query: { genre: "Isekai" },
-  },
 ];
 
 let browseCache: CategorySection[] | null = null;

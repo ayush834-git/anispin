@@ -10,7 +10,6 @@ type SpinResult = {
 } | null;
 
 const MIN_POOL_SIZE = 15;
-const RECENT_HISTORY_LIMIT = 5;
 const MIN_WHEEL_SLICES = 10;
 const MAX_WHEEL_SLICES = 12;
 
@@ -26,13 +25,6 @@ function dedupeById(list: Anime[]) {
 
 function nextSeed(seed: number) {
   return (seed * 1664525 + 1013904223) >>> 0;
-}
-
-function getCooldownSize(poolSize: number) {
-  if (poolSize < 10) {
-    return Math.max(1, Math.min(RECENT_HISTORY_LIMIT, Math.floor(poolSize / 2)));
-  }
-  return RECENT_HISTORY_LIMIT;
 }
 
 function shuffleBySeed<T>(list: T[], initialSeed: number) {
@@ -53,6 +45,15 @@ function buildWheelPool(list: Anime[], seed: number) {
   const dynamicCount = MIN_WHEEL_SLICES + (seed % (MAX_WHEEL_SLICES - MIN_WHEEL_SLICES + 1));
   const sliceCount = Math.min(randomized.length, dynamicCount);
   return randomized.slice(0, sliceCount);
+}
+
+function seedFromKey(key: string) {
+  let hash = 2166136261;
+  for (let index = 0; index < key.length; index += 1) {
+    hash ^= key.charCodeAt(index);
+    hash = Math.imul(hash, 16777619);
+  }
+  return (hash >>> 0) || 1;
 }
 
 function matchesGenre(anime: Anime, genre?: string) {
@@ -129,13 +130,11 @@ export function useSpinEngine(filters: Filters) {
     list: [],
   });
   const [selectedAnime, setSelectedAnime] = useState<Anime | null>(null);
+  const [selectedIndex, setSelectedIndex] = useState<number | null>(null);
   const [isSpinning, setIsSpinning] = useState(false);
-  const [wheelShuffleSeed, setWheelShuffleSeed] = useState(1);
   const spinTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const requestedExtraKeysRef = useRef<Set<string>>(new Set());
   const isFetchingExtraRef = useRef(false);
-  const recentResultsRef = useRef<number[]>([]);
-  const selectionFrequencyRef = useRef<Record<number, number>>({});
 
   const extraAnimeList = useMemo(
     () => (extraPageState.key === queryFilterKey ? extraPageState.list : []),
@@ -222,9 +221,11 @@ export function useSpinEngine(filters: Filters) {
     };
   }, [error, filteredList.length, isLoading, normalizedQueryFilters, queryFilterKey]);
 
+  const wheelSeed = useMemo(() => seedFromKey(queryFilterKey), [queryFilterKey]);
+
   const wheelPool = useMemo(() => {
-    return buildWheelPool(filteredList, wheelShuffleSeed);
-  }, [filteredList, wheelShuffleSeed]);
+    return buildWheelPool(filteredList, wheelSeed);
+  }, [filteredList, wheelSeed]);
 
   useEffect(() => {
     return () => {
@@ -234,23 +235,6 @@ export function useSpinEngine(filters: Filters) {
     };
   }, []);
 
-  const weightedSelect = useCallback((list: Anime[]) => {
-    if (list.length === 0) return null;
-
-    const weights = list.map((item) => {
-      const selectedCount = selectionFrequencyRef.current[item.id] ?? 0;
-      return 1 / (1 + selectedCount);
-    });
-
-    const sum = weights.reduce((a, b) => a + b, 0);
-    let random = Math.random() * sum;
-    for (let i = 0; i < list.length; i += 1) {
-      random -= weights[i];
-      if (random <= 0) return list[i];
-    }
-    return list[list.length - 1];
-  }, []);
-
   const spin = useCallback(
     (candidateList?: Anime[], spinDurationMs = 2200): SpinResult => {
       const sourceList = candidateList && candidateList.length > 0 ? candidateList : filteredList;
@@ -258,52 +242,30 @@ export function useSpinEngine(filters: Filters) {
 
       if (sourceList.length === 0) {
         setSelectedAnime(null);
+        setSelectedIndex(null);
         if (spinTimerRef.current) clearTimeout(spinTimerRef.current);
         spinTimerRef.current = setTimeout(() => {
           setIsSpinning(false);
-          setWheelShuffleSeed((previous) => nextSeed(previous || 1) || 1);
         }, spinDurationMs);
         return null;
       }
 
-      const cooldownSize = getCooldownSize(sourceList.length);
-      const recentBlockedIds = new Set(recentResultsRef.current.slice(-cooldownSize));
-      const eligiblePool = sourceList.filter((anime) => !recentBlockedIds.has(anime.id));
-      const selectionPool = eligiblePool.length > 0 ? eligiblePool : sourceList;
-
-      const picked = weightedSelect(selectionPool);
-      if (!picked) {
-        setSelectedAnime(null);
-        if (spinTimerRef.current) clearTimeout(spinTimerRef.current);
-        spinTimerRef.current = setTimeout(() => {
-          setIsSpinning(false);
-          setWheelShuffleSeed((previous) => nextSeed(previous || 1) || 1);
-        }, spinDurationMs);
-        return null;
-      }
-
-      const pickedIndex = sourceList.findIndex((anime) => anime.id === picked.id);
+      const pickedIndex = Math.floor(Math.random() * sourceList.length);
+      const picked = sourceList[pickedIndex];
       setSelectedAnime(picked);
-
-      recentResultsRef.current.push(picked.id);
-      if (recentResultsRef.current.length > RECENT_HISTORY_LIMIT) {
-        recentResultsRef.current.shift();
-      }
-      selectionFrequencyRef.current[picked.id] =
-        (selectionFrequencyRef.current[picked.id] ?? 0) + 1;
+      setSelectedIndex(pickedIndex);
 
       if (spinTimerRef.current) clearTimeout(spinTimerRef.current);
       spinTimerRef.current = setTimeout(() => {
         setIsSpinning(false);
-        setWheelShuffleSeed((previous) => nextSeed(previous || 1) || 1);
       }, spinDurationMs);
 
       return {
         picked,
-        pickedIndex: Math.max(0, pickedIndex),
+        pickedIndex,
       };
     },
-    [filteredList, weightedSelect],
+    [filteredList],
   );
 
   return useMemo(
@@ -312,6 +274,7 @@ export function useSpinEngine(filters: Filters) {
       filteredList,
       wheelPool,
       selectedAnime,
+      selectedIndex,
       isLoading,
       error,
       isSpinning,
@@ -323,6 +286,7 @@ export function useSpinEngine(filters: Filters) {
       isLoading,
       isSpinning,
       selectedAnime,
+      selectedIndex,
       sourceAnimeList,
       spin,
       wheelPool,

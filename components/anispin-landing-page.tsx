@@ -440,6 +440,9 @@ function SpinReactorSection() {
   const [winnerPulse, setWinnerPulse] = useState(false);
   const [highlightResult, setHighlightResult] = useState(false);
   const [selectedPopularityTier, setSelectedPopularityTier] = useState<string | null>(null);
+  const [lockedWheelPool, setLockedWheelPool] = useState<{ key: string; pool: Anime[] } | null>(
+    null,
+  );
   const wheelId = useId().replace(/:/g, "");
   const {
     filteredList,
@@ -466,7 +469,22 @@ function SpinReactorSection() {
   const highlightTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const winnerPulseTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-  const wheelAnime = wheelPool;
+  const lockKey = useMemo(
+    () =>
+      [
+        filters.genre ?? "",
+        filters.status ?? "",
+        filters.length ?? "",
+        filters.seasonal ? "seasonal" : "",
+        filters.classic ? "classic" : "",
+      ].join("|"),
+    [filters.classic, filters.genre, filters.length, filters.seasonal, filters.status],
+  );
+
+  const wheelAnime =
+    lockedWheelPool && lockedWheelPool.key === lockKey ? lockedWheelPool.pool : wheelPool;
+  const winnerSliceIndex =
+    lockedWheelPool && lockedWheelPool.key === lockKey ? activeSliceIndex : null;
   const displaySegments = wheelAnime.length > 0 ? wheelAnime : PLACEHOLDER_SEGMENTS;
 
   const wheelSlices = useMemo<WheelSlice[]>(() => {
@@ -662,21 +680,24 @@ function SpinReactorSection() {
   const onSpinClick = () => {
     if (!ringRef.current || wheelAnime.length === 0 || isSpinning || isLoading) return;
 
-    const result = spin(wheelAnime, SPIN_DURATION_MS);
+    const spinPool = wheelPool.length > 0 ? wheelPool : wheelAnime;
+    setLockedWheelPool({ key: lockKey, pool: spinPool });
+
+    const result = spin(spinPool, SPIN_DURATION_MS);
     if (!result) {
       setSelectedPopularityTier(null);
       return;
     }
-    setSelectedPopularityTier(getSpinPopularityTierByPercentile(result.picked, wheelAnime));
+    setSelectedPopularityTier(getSpinPopularityTierByPercentile(result.picked, spinPool));
 
-    const sliceCount = wheelAnime.length;
-    const sliceAngle = 360 / sliceCount;
-    const targetSlice = result.pickedIndex % sliceCount;
-    const targetSliceCenter = targetSlice * sliceAngle + sliceAngle / 2;
-    const targetNormalized = (270 - targetSliceCenter + 360) % 360;
+    const selectedIndex = result.pickedIndex;
+    const segmentAngle = 360 / spinPool.length;
+    const fullSpins = 5 * 360;
+    const targetAngle = 360 - selectedIndex * segmentAngle - segmentAngle / 2;
+    const targetNormalized = ((targetAngle % 360) + 360) % 360;
     const currentNormalized = ((wheelRotationRef.current % 360) + 360) % 360;
     const delta = (targetNormalized - currentNormalized + 360) % 360;
-    const nextRotation = wheelRotationRef.current + 360 * 6 + delta;
+    const finalRotation = wheelRotationRef.current + fullSpins + delta;
 
     setActiveSliceIndex(null);
     setWinnerPulse(false);
@@ -685,9 +706,9 @@ function SpinReactorSection() {
 
     gsap.timeline({
       onComplete: () => {
-        wheelRotationRef.current = nextRotation;
+        wheelRotationRef.current = finalRotation;
         stopSpinFrame();
-        setActiveSliceIndex(targetSlice);
+        setActiveSliceIndex(selectedIndex);
         setWinnerPulse(true);
 
         if (winnerPulseTimerRef.current) clearTimeout(winnerPulseTimerRef.current);
@@ -711,7 +732,7 @@ function SpinReactorSection() {
       .to(
         ringRef.current,
         {
-          rotation: nextRotation,
+          rotation: finalRotation,
           duration: SPIN_DURATION_MS / 1000,
           ease: "power4.out",
         },
@@ -900,7 +921,7 @@ function SpinReactorSection() {
                         >
                           {truncateWheelTitle(anime.title)}
                         </text>
-                        {activeSliceIndex === index ? (
+                        {winnerSliceIndex === index ? (
                           <path
                             d={slice.path}
                             className={`anispin-wheel-winner ${winnerPulse ? "is-pulsing" : ""}`}
