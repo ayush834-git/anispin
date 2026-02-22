@@ -14,6 +14,7 @@ export type Anime = {
   genres: string[];
   score?: number;
   popularity?: number;
+  hasPrequel?: boolean;
   season?: string;
   seasonYear?: number;
   format?: string;

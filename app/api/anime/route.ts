@@ -25,6 +25,11 @@ type AniListMedia = {
   season: string | null;
   seasonYear: number | null;
   format: string | null;
+  relations: {
+    edges: Array<{
+      relationType: string | null;
+    }>;
+  } | null;
 };
 
 type AniListResponse = {
@@ -81,6 +86,11 @@ const query = gql`
         season
         seasonYear
         format
+        relations {
+          edges {
+            relationType
+          }
+        }
       }
     }
   }
@@ -178,6 +188,10 @@ export async function GET(req: Request) {
           genres: media.genres,
           score: media.averageScore ?? undefined,
           popularity: media.popularity ?? undefined,
+          hasPrequel:
+            (media.relations?.edges ?? []).some(
+              (edge) => edge.relationType === "PREQUEL",
+            ) || false,
           season: media.season ?? undefined,
           seasonYear: media.seasonYear ?? undefined,
           format: media.format ?? undefined,

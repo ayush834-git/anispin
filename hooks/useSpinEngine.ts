@@ -86,6 +86,16 @@ function matchesLength(anime: Anime, length?: Filters["length"], tolerance = 0) 
   return true;
 }
 
+function prioritizeEntryLevel(list: Anime[]) {
+  const nonPrequelEntries = list.filter((anime) => !anime.hasPrequel);
+  if (nonPrequelEntries.length >= MIN_POOL_SIZE) {
+    return nonPrequelEntries;
+  }
+
+  const prequelEntries = list.filter((anime) => anime.hasPrequel);
+  return [...nonPrequelEntries, ...prequelEntries];
+}
+
 export function useSpinEngine(filters: Filters) {
   const queryFilters = useMemo<Filters>(
     () => ({
@@ -126,7 +136,7 @@ export function useSpinEngine(filters: Filters) {
     [animeList, extraAnimeList],
   );
 
-  const strictFilteredList = useMemo(
+  const strictBaseList = useMemo(
     () =>
       sourceAnimeList.filter(
         (anime) =>
@@ -137,7 +147,7 @@ export function useSpinEngine(filters: Filters) {
     [filters.genre, filters.length, filters.status, sourceAnimeList],
   );
 
-  const relaxedFilteredList = useMemo(
+  const relaxedBaseList = useMemo(
     () =>
       sourceAnimeList.filter(
         (anime) =>
@@ -146,6 +156,16 @@ export function useSpinEngine(filters: Filters) {
           matchesLength(anime, filters.length, 5),
       ),
     [filters.genre, filters.length, filters.status, sourceAnimeList],
+  );
+
+  const strictFilteredList = useMemo(
+    () => prioritizeEntryLevel(strictBaseList),
+    [strictBaseList],
+  );
+
+  const relaxedFilteredList = useMemo(
+    () => prioritizeEntryLevel(relaxedBaseList),
+    [relaxedBaseList],
   );
 
   const filteredList = useMemo(() => {

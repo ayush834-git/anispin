@@ -135,12 +135,20 @@ function getSpinScoreLabel(score?: number | null) {
   return `⭐ ${(score / 10).toFixed(1)} / 10`;
 }
 
-function getSpinPopularityTier(popularity?: number | null) {
-  const value = typeof popularity === "number" ? popularity : Number.POSITIVE_INFINITY;
-  if (value <= 1000) return "🔥 Mainstream Hit";
-  if (value <= 5000) return "⭐ Popular";
-  if (value <= 15000) return "💎 Cult Favorite";
-  return "🌱 Hidden Gem";
+function getSpinPopularityTierByPercentile(selectedAnime: Anime, candidatePool: Anime[]) {
+  if (candidatePool.length === 0) return "🎯 Niche Pick";
+
+  const rankedByPopularity = [...candidatePool].sort(
+    (a, b) => (b.popularity ?? -1) - (a.popularity ?? -1),
+  );
+  const selectedIndex = rankedByPopularity.findIndex((anime) => anime.id === selectedAnime.id);
+  const safeIndex = selectedIndex >= 0 ? selectedIndex : rankedByPopularity.length - 1;
+  const percentile = safeIndex / rankedByPopularity.length;
+
+  if (percentile <= 0.1) return "🔥 Mainstream Hit";
+  if (percentile <= 0.3) return "⭐ Highly Popular";
+  if (percentile <= 0.7) return "💎 Fan Favorite";
+  return "🎯 Niche Pick";
 }
 
 function StatusBubble({ text }: { text: string }) {
@@ -428,6 +436,7 @@ function SpinReactorSection() {
   const [activeSliceIndex, setActiveSliceIndex] = useState<number | null>(null);
   const [winnerPulse, setWinnerPulse] = useState(false);
   const [highlightResult, setHighlightResult] = useState(false);
+  const [selectedPopularityTier, setSelectedPopularityTier] = useState<string | null>(null);
   const wheelId = useId().replace(/:/g, "");
   const {
     filteredList,
@@ -651,7 +660,11 @@ function SpinReactorSection() {
     if (!ringRef.current || wheelAnime.length === 0 || isSpinning || isLoading) return;
 
     const result = spin(wheelAnime, SPIN_DURATION_MS);
-    if (!result) return;
+    if (!result) {
+      setSelectedPopularityTier(null);
+      return;
+    }
+    setSelectedPopularityTier(getSpinPopularityTierByPercentile(result.picked, wheelAnime));
 
     const sliceCount = wheelAnime.length;
     const sliceAngle = 360 / sliceCount;
@@ -962,7 +975,8 @@ function SpinReactorSection() {
                           📺 {getEpisodeDisplay(selectedAnime)}
                         </p>
                         <p className="mt-2 text-sm font-semibold text-white/88">
-                          {getSpinScoreLabel(selectedAnime.score)} | {getSpinPopularityTier(selectedAnime.popularity)}
+                          {getSpinScoreLabel(selectedAnime.score)}
+                          {selectedPopularityTier ? ` ${selectedPopularityTier}` : ""}
                         </p>
                         <p className="mt-1 text-xs font-semibold uppercase tracking-wide text-white/66">
                           Commitment: {getCommitmentLabel(selectedAnime.episodes, selectedAnime.status)}
