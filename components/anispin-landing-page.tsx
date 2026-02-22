@@ -866,26 +866,28 @@ function SpinReactorSection() {
                   aria-label="Anime spin wheel"
                 >
                   <defs>
-                    <filter id={`${wheelId}-slice-blur`}>
-                      <feGaussianBlur stdDeviation="3.2" />
-                    </filter>
                     {wheelSlices.map((slice, index) => (
-                      <g key={`${wheelId}-defs-${index}`}>
-                        <clipPath id={`${wheelId}-clip-${index}`}>
-                          <path d={slice.path} />
-                        </clipPath>
-                        <linearGradient
-                          id={`${wheelId}-overlay-${index}`}
-                          x1="0%"
-                          y1="0%"
-                          x2="100%"
-                          y2="100%"
-                        >
-                          <stop offset="0%" stopColor="rgba(5, 7, 15, 0.36)" />
-                          <stop offset="58%" stopColor="rgba(5, 7, 15, 0.56)" />
-                          <stop offset="100%" stopColor="rgba(5, 7, 15, 0.74)" />
-                        </linearGradient>
-                      </g>
+                      <clipPath
+                        key={`${wheelId}-clip-${index}`}
+                        id={`${wheelId}-clip-${index}`}
+                        clipPathUnits="userSpaceOnUse"
+                      >
+                        <path d={slice.path} />
+                      </clipPath>
+                    ))}
+                    {wheelSlices.map((_, index) => (
+                      <linearGradient
+                        key={`${wheelId}-overlay-${index}`}
+                        id={`${wheelId}-overlay-${index}`}
+                        x1="0%"
+                        y1="0%"
+                        x2="100%"
+                        y2="100%"
+                      >
+                        <stop offset="0%" stopColor="rgba(5, 7, 15, 0.36)" />
+                        <stop offset="58%" stopColor="rgba(5, 7, 15, 0.56)" />
+                        <stop offset="100%" stopColor="rgba(5, 7, 15, 0.74)" />
+                      </linearGradient>
                     ))}
                   </defs>
 
@@ -895,21 +897,24 @@ function SpinReactorSection() {
 
                     return (
                       <g key={`wheel-slice-${anime.id}-${index}`}>
-                        <path d={slice.path} fill={slice.fallbackColor} opacity={0.9} />
-                        {anime.poster ? (
-                          <image
-                            href={anime.poster}
-                            x={0}
-                            y={0}
-                            width={WHEEL_SIZE}
-                            height={WHEEL_SIZE}
-                            preserveAspectRatio="xMidYMid slice"
-                            clipPath={`url(#${wheelId}-clip-${index})`}
-                            filter={`url(#${wheelId}-slice-blur)`}
-                            opacity={0.92}
-                          />
-                        ) : null}
-                        <path d={slice.path} fill={`url(#${wheelId}-overlay-${index})`} />
+                        <g
+                          clipPath={`url(#${wheelId}-clip-${index})`}
+                          style={{ transformOrigin: "50% 50%" }}
+                        >
+                          <path d={slice.path} fill={slice.fallbackColor} opacity={0.9} />
+                          {anime.poster ? (
+                            <image
+                              href={anime.poster}
+                              x={0}
+                              y={0}
+                              width={WHEEL_SIZE}
+                              height={WHEEL_SIZE}
+                              preserveAspectRatio="xMidYMid slice"
+                              opacity={0.92}
+                            />
+                          ) : null}
+                          <path d={slice.path} fill={`url(#${wheelId}-overlay-${index})`} />
+                        </g>
                         <path d={slice.path} className="anispin-wheel-slice-border" />
                         <text
                           x={slice.labelX}
