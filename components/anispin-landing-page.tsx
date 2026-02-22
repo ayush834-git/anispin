@@ -41,8 +41,8 @@ const LENGTH_OPTIONS: Array<{
 }> = [
   { value: "SHORT", label: "Short", range: "1-12 eps" },
   { value: "MEDIUM", label: "Medium", range: "13-26 eps" },
-  { value: "LONG", label: "Long", range: "27-100 eps" },
-  { value: "VERY_LONG", label: "Very Long", range: "100+ eps" },
+  { value: "LONG", label: "Long", range: "27-75 eps" },
+  { value: "VERY_LONG", label: "Very Long", range: "76+ eps" },
   { value: "ONGOING", label: "Ongoing", range: "Releasing" },
 ];
 
@@ -419,6 +419,7 @@ function SpinReactorSection() {
   const wheelId = useId().replace(/:/g, "");
   const {
     filteredList,
+    wheelPool,
     selectedAnime,
     isLoading,
     error,
@@ -441,7 +442,7 @@ function SpinReactorSection() {
   const highlightTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const winnerPulseTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-  const wheelAnime = useMemo(() => filteredList.slice(0, 10), [filteredList]);
+  const wheelAnime = wheelPool;
   const displaySegments = wheelAnime.length > 0 ? wheelAnime : PLACEHOLDER_SEGMENTS;
 
   const wheelSlices = useMemo<WheelSlice[]>(() => {

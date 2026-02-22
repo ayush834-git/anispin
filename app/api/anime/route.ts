@@ -54,6 +54,7 @@ const query = gql`
     Page(page: $page, perPage: $perPage) {
       media(
         type: ANIME
+        format: TV
         genre: $genre
         status: $status
         season: $season
@@ -118,8 +119,16 @@ export async function GET(req: Request) {
       ? yearThreshold * 10000 + 101
       : undefined;
 
-  const variables = {
-    page: 1,
+  const pageStartParam = Number(searchParams.get("pageStart") ?? 1);
+  const pagesParam = Number(searchParams.get("pages") ?? 2);
+  const pageStart =
+    Number.isFinite(pageStartParam) && pageStartParam > 0 ? Math.floor(pageStartParam) : 1;
+  const pages =
+    Number.isFinite(pagesParam) && pagesParam > 0
+      ? Math.min(3, Math.floor(pagesParam))
+      : 2;
+
+  const baseVariables = {
     perPage: 50,
     genre,
     status,
@@ -132,34 +141,49 @@ export async function GET(req: Request) {
   };
 
   try {
-    const data = await request<AniListResponse>(endpoint, query, variables);
+    const pageRequests = Array.from({ length: pages }, (_, index) =>
+      request<AniListResponse>(endpoint, query, {
+        ...baseVariables,
+        page: pageStart + index,
+      }),
+    );
+    const pageData = await Promise.all(pageRequests);
 
-    const transformed: Anime[] = (data.Page?.media ?? []).flatMap((media) => {
+    const mediaById = new Map<number, AniListMedia>();
+    for (const response of pageData) {
+      for (const media of response.Page?.media ?? []) {
+        if (!mediaById.has(media.id)) {
+          mediaById.set(media.id, media);
+        }
+      }
+    }
+
+    const transformed: Anime[] = Array.from(mediaById.values()).flatMap((media) => {
       const poster = media.coverImage.extraLarge || media.coverImage.large;
       if (!poster) return [];
 
-        return [
-          {
-            id: media.id,
-            title:
-              media.title.english ||
-              media.title.romaji ||
-              media.title.native ||
-              "Unknown Title",
-            description: "",
-            poster,
-            banner: media.bannerImage || null,
-            episodes: media.episodes ?? undefined,
-            status: media.status ?? undefined,
-            genres: media.genres,
-            score: media.averageScore ?? undefined,
-            popularity: media.popularity ?? undefined,
-            season: media.season ?? undefined,
-            seasonYear: media.seasonYear ?? undefined,
-            format: media.format ?? undefined,
-          },
-        ];
-      });
+      return [
+        {
+          id: media.id,
+          title:
+            media.title.english ||
+            media.title.romaji ||
+            media.title.native ||
+            "Unknown Title",
+          description: "",
+          poster,
+          banner: media.bannerImage || null,
+          episodes: media.episodes ?? undefined,
+          status: media.status ?? undefined,
+          genres: media.genres,
+          score: media.averageScore ?? undefined,
+          popularity: media.popularity ?? undefined,
+          season: media.season ?? undefined,
+          seasonYear: media.seasonYear ?? undefined,
+          format: media.format ?? undefined,
+        },
+      ];
+    });
 
     return NextResponse.json(transformed, {
       status: 200,

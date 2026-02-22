@@ -3,6 +3,14 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { buildAnimeFilters, fetchAnime } from "@/lib/anilist";
 import { type Anime, type Filters } from "@/types/anime";
 
+const animeQueryCache = new Map<string, Anime[]>();
+
+function getFilterCacheKey(filters: Record<string, string | number | boolean>) {
+  const entries = Object.entries(filters).sort(([a], [b]) => a.localeCompare(b));
+  if (entries.length === 0) return "__all__";
+  return entries.map(([key, value]) => `${key}:${String(value)}`).join("|");
+}
+
 export function useAnimeQuery(filters: Filters, debounceMs = 0) {
   const [animeList, setAnimeList] = useState<Anime[]>([]);
   const [isLoading, setIsLoading] = useState(false);
@@ -10,6 +18,7 @@ export function useAnimeQuery(filters: Filters, debounceMs = 0) {
   const mountedRef = useRef(true);
 
   const normalizedFilters = useMemo(() => buildAnimeFilters(filters), [filters]);
+  const cacheKey = useMemo(() => getFilterCacheKey(normalizedFilters), [normalizedFilters]);
 
   useEffect(() => {
     mountedRef.current = true;
@@ -20,6 +29,16 @@ export function useAnimeQuery(filters: Filters, debounceMs = 0) {
 
   useEffect(() => {
     let cancelled = false;
+    const cached = animeQueryCache.get(cacheKey);
+    if (cached) {
+      setAnimeList(cached);
+      setError(null);
+      setIsLoading(false);
+      return () => {
+        cancelled = true;
+      };
+    }
+
     const timer = setTimeout(async () => {
       setIsLoading(true);
       setError(null);
@@ -27,6 +46,7 @@ export function useAnimeQuery(filters: Filters, debounceMs = 0) {
       try {
         const list = await fetchAnime(normalizedFilters);
         if (cancelled || !mountedRef.current) return;
+        animeQueryCache.set(cacheKey, list);
         setAnimeList(list);
       } catch {
         if (cancelled || !mountedRef.current) return;
@@ -42,7 +62,7 @@ export function useAnimeQuery(filters: Filters, debounceMs = 0) {
       cancelled = true;
       clearTimeout(timer);
     };
-  }, [debounceMs, normalizedFilters]);
+  }, [cacheKey, debounceMs, normalizedFilters]);
 
   return {
     animeList,
