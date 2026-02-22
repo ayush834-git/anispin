@@ -248,9 +248,6 @@ function ChaosHeader() {
           </Link>
         </nav>
 
-        <Button className="anispin-login-button h-10 rounded-full px-6 text-sm font-bold text-white">
-          Login
-        </Button>
       </div>
     </header>
   );
