@@ -61,6 +61,8 @@ export function FranchiseEntriesStrip({ entries }: FranchiseEntriesStripProps) {
       <div
         ref={scrollerRef}
         onWheel={onWheelHorizontal}
+        data-lenis-prevent
+        data-lenis-prevent-wheel
         className="scrollbar-hide touch-pan-x w-full overflow-x-auto overflow-y-hidden pb-3"
       >
         <div className="flex min-w-max gap-4 pb-2">
