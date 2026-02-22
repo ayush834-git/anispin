@@ -7,8 +7,6 @@ import { gsap } from "gsap";
 import { ScrollTrigger } from "gsap/ScrollTrigger";
 import { Flame, Menu, X } from "lucide-react";
 import {
-  type CSSProperties,
-  useCallback,
   useEffect,
   useId,
   useLayoutEffect,
@@ -100,6 +98,16 @@ function describeSlicePath(
 
 function truncateWheelTitle(title: string) {
   return title.length > 16 ? `${title.slice(0, 16)}...` : title;
+}
+
+function getWheelPosterSrc(poster: string) {
+  if (poster.includes("/extraLarge/")) {
+    return poster.replace("/extraLarge/", "/large/");
+  }
+  if (poster.includes("/large/")) {
+    return poster.replace("/large/", "/medium/");
+  }
+  return poster;
 }
 
 function formatStatus(status?: string | null) {
@@ -526,9 +534,6 @@ function SpinReactorSection() {
   const spinButtonRef = useRef<HTMLDivElement | null>(null);
   const resultRef = useRef<HTMLDivElement | null>(null);
   const wheelRotationRef = useRef(0);
-  const spinRafRef = useRef<number | null>(null);
-  const previousRotationRef = useRef(0);
-  const previousFrameTimeRef = useRef<number | null>(null);
   const scrollTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const highlightTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const winnerPulseTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -583,60 +588,13 @@ function SpinReactorSection() {
     });
   }, [displaySegments]);
 
-  const stopSpinFrame = useCallback(() => {
-    if (spinRafRef.current !== null) {
-      window.cancelAnimationFrame(spinRafRef.current);
-      spinRafRef.current = null;
-    }
-
-    previousFrameTimeRef.current = null;
-
-    if (ringRef.current) {
-      ringRef.current.style.setProperty("--spin-blur", "0px");
-      ringRef.current.style.setProperty("--spin-glow-strength", "0.38");
-    }
-  }, []);
-
-  const startSpinFrame = useCallback(() => {
-    if (!ringRef.current) return;
-
-    stopSpinFrame();
-    previousRotationRef.current =
-      Number(gsap.getProperty(ringRef.current, "rotation")) || wheelRotationRef.current;
-
-    const updateFrame = (time: number) => {
-      if (!ringRef.current) {
-        stopSpinFrame();
-        return;
-      }
-
-      const previousTime = previousFrameTimeRef.current ?? time;
-      const elapsed = Math.max(16, time - previousTime);
-      const currentRotation = Number(gsap.getProperty(ringRef.current, "rotation")) || 0;
-      const rotationDelta = Math.abs(currentRotation - previousRotationRef.current);
-      const velocity = rotationDelta / (elapsed / 16.67);
-      const intensity = Math.min(1, velocity / 18);
-
-      ringRef.current.style.setProperty("--spin-blur", `${(intensity * 2.4).toFixed(2)}px`);
-      ringRef.current.style.setProperty(
-        "--spin-glow-strength",
-        `${(0.38 + intensity * 0.62).toFixed(2)}`,
-      );
-
-      previousRotationRef.current = currentRotation;
-      previousFrameTimeRef.current = time;
-      spinRafRef.current = window.requestAnimationFrame(updateFrame);
-    };
-
-    spinRafRef.current = window.requestAnimationFrame(updateFrame);
-  }, [stopSpinFrame]);
-
   useEffect(() => {
     if (ringRef.current) {
       gsap.set(ringRef.current, {
         transformOrigin: "50% 50%",
         rotation: 0,
         force3D: true,
+        z: 0,
       });
     }
   }, []);
@@ -697,13 +655,20 @@ function SpinReactorSection() {
 
   useEffect(() => {
     return () => {
-      stopSpinFrame();
-
       if (scrollTimerRef.current) clearTimeout(scrollTimerRef.current);
       if (highlightTimerRef.current) clearTimeout(highlightTimerRef.current);
       if (winnerPulseTimerRef.current) clearTimeout(winnerPulseTimerRef.current);
     };
-  }, [stopSpinFrame]);
+  }, []);
+
+  useEffect(() => {
+    const originalOverflow = document.body.style.overflow;
+    document.body.style.overflow = isSpinning ? "hidden" : "auto";
+
+    return () => {
+      document.body.style.overflow = originalOverflow || "auto";
+    };
+  }, [isSpinning]);
 
   const onSpinHoverStart = () => {
     if (spinButtonRef.current) {
@@ -766,12 +731,10 @@ function SpinReactorSection() {
     setActiveSliceIndex(null);
     setWinnerPulse(false);
     setHighlightResult(false);
-    startSpinFrame();
 
     gsap.timeline({
       onComplete: () => {
         wheelRotationRef.current = finalRotation;
-        stopSpinFrame();
         setActiveSliceIndex(selectedIndex);
         setWinnerPulse(true);
 
@@ -901,7 +864,7 @@ function SpinReactorSection() {
             {error ? <StatusBubble text="Unable to load anime. Try again later." /> : null}
             {isEmpty ? <StatusBubble text="No matches found. Try different filters." /> : null}
 
-            <div className="anispin-wheel-scene relative mt-2 h-[min(76vw,520px)] w-[min(76vw,520px)]">
+            <div className="anispin-wheel-scene transform-gpu relative mt-2 h-[min(76vw,520px)] w-[min(76vw,520px)]">
               <span
                 ref={pulseRef}
                 className="anispin-wheel-aura pointer-events-none absolute inset-[8%] rounded-full"
@@ -916,13 +879,8 @@ function SpinReactorSection() {
               <div className="anispin-wheel-ring absolute inset-0">
                 <div
                   ref={ringRef}
-                  className={`anispin-wheel-rotor absolute inset-0 ${isSpinning ? "is-spinning" : ""}`}
-                  style={
-                    {
-                      "--spin-blur": "0px",
-                      "--spin-glow-strength": "0.38",
-                    } as CSSProperties
-                  }
+                  className={`anispin-wheel-rotor transform-gpu absolute inset-0 ${isSpinning ? "is-spinning" : ""}`}
+                  style={{ willChange: "transform", transform: "translateZ(0)" }}
                 >
                 <svg
                   viewBox={`0 0 ${WHEEL_SIZE} ${WHEEL_SIZE}`}
@@ -968,13 +926,14 @@ function SpinReactorSection() {
                           <path d={slice.path} fill={slice.fallbackColor} opacity={0.9} />
                           {anime.poster ? (
                             <image
-                              href={anime.poster}
+                              href={getWheelPosterSrc(anime.poster)}
                               x={0}
                               y={0}
                               width={WHEEL_SIZE}
                               height={WHEEL_SIZE}
                               preserveAspectRatio="xMidYMid slice"
                               opacity={0.92}
+                              style={{ pointerEvents: "none" }}
                             />
                           ) : null}
                           <path d={slice.path} fill={`url(#${wheelId}-overlay-${index})`} />

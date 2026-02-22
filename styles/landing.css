@@ -243,27 +243,9 @@ html.lenis body {
   border-radius: 50%;
   overflow: hidden;
   transform-origin: 50% 50%;
-  will-change: transform, filter;
-  filter: blur(var(--spin-blur, 0px));
-}
-
-.anispin-wheel-rotor::before {
-  content: "";
-  position: absolute;
-  inset: -2%;
-  z-index: 2;
-  border-radius: 999px;
-  border: 1px solid rgba(255, 255, 255, 0.2);
-  box-shadow:
-    0 0 44px rgba(0, 240, 255, calc(var(--spin-glow-strength, 0.38) * 0.75)),
-    0 0 58px rgba(255, 94, 0, calc(var(--spin-glow-strength, 0.38) * 0.65));
-  pointer-events: none;
-}
-
-.anispin-wheel-rotor.is-spinning::before {
-  box-shadow:
-    0 0 56px rgba(0, 240, 255, calc(var(--spin-glow-strength, 0.38) * 0.95)),
-    0 0 76px rgba(255, 94, 0, calc(var(--spin-glow-strength, 0.38) * 0.85));
+  will-change: transform;
+  backface-visibility: hidden;
+  transform: translateZ(0);
 }
 
 .anispin-wheel-slice-border {
