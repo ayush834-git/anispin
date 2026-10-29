@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { SmoothScrollProvider } from "@/components/scroll/smooth-scroll-provider";
 import "./globals.css";
+import { Analytics } from '@vercel/analytics/next';
 
 export const metadata: Metadata = {
   title: "AniSpin | Anime Decision Engine",
@@ -24,6 +25,7 @@ export default function RootLayout({
     <html lang="en" className="dark">
       <body className="antialiased">
         <SmoothScrollProvider>{children}</SmoothScrollProvider>
+        <Analytics/>
       </body>
     </html>
   );
